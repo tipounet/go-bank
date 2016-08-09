@@ -41,11 +41,11 @@ func GetAllUser(w http.ResponseWriter, r *http.Request) {
 func SearchUserByID(w http.ResponseWriter, r *http.Request) {
 	initUserService()
 	vars := mux.Vars(r)
-	stringID := vars["bankid"]
+	stringID := vars["id"]
 	// FIXME : comment je passe d'une string à un int64 ?
 	ID, e := strconv.Atoi(stringID)
 	if e != nil {
-		errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: "Paramètre name obligatoire non vide"}, http.StatusBadRequest, w)
+		errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: "Paramètre id obligatoire non vide"}, http.StatusBadRequest, w)
 	} else {
 		users, err := userService.Search(int64(ID))
 		if err != nil {

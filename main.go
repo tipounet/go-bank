@@ -23,7 +23,9 @@ func main() {
 	fmt.Println("Please visite http://localhost:" + port)
 
 	myRouter := controllers.NewRouter()
+
 	log.Fatal(http.ListenAndServe(":"+port, myRouter))
+
 }
 
 func panicAbord(e error) {

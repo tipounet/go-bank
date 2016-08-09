@@ -41,7 +41,7 @@ func GetAllAccount(w http.ResponseWriter, r *http.Request) {
 func SearchAccountByID(w http.ResponseWriter, r *http.Request) {
 	initAccountService()
 	vars := mux.Vars(r)
-	stringID := vars["bankid"]
+	stringID := vars["id"]
 	// FIXME : comment je passe d'une string à un int64 ?
 	ID, e := strconv.Atoi(stringID)
 	if e != nil {
@@ -138,7 +138,7 @@ func DeleteAccountID(w http.ResponseWriter, r *http.Request) {
 // DeleteAccountByNumber : reponse http à la demande de suppression d'un compte a partir de son numéro
 func DeleteAccountByNumber(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	accountNumber := vars["id"]
+	accountNumber := vars["number"]
 	if accountNumber == "" {
 		errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: "Paramètre accountNumber obligatoire non vide"}, http.StatusBadRequest, w)
 	} else {

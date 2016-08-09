@@ -41,7 +41,7 @@ func GetAllBanK(w http.ResponseWriter, r *http.Request) {
 func SearchBankByID(w http.ResponseWriter, r *http.Request) {
 	initBankService()
 	vars := mux.Vars(r)
-	stringID := vars["bankid"]
+	stringID := vars["id"]
 	// FIXME : comment je passe d'une string à un int64 ?
 	ID, e := strconv.Atoi(stringID)
 	if e != nil {

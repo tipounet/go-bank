@@ -59,7 +59,7 @@ func SearchTransactionTypeByID(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// CreateTyCreateTransactionTypepeTransaction : Réponse sur requete POST a /typeTransaction
+// CreateTransactionType : Réponse sur requete POST a /typeTransaction
 func CreateTransactionType(w http.ResponseWriter, r *http.Request) {
 	initTransactionTypeService()
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")

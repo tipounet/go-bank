@@ -14,11 +14,18 @@ type Route struct {
 type Routes []Route
 
 var routes = Routes{
+	Route{
+		"Index",
+		http.MethodGet,
+		"/",
+		HomePage,
+	},
+	// css pour le markdown to html
 	// Route{
-	// 	"Index",
+	// 	"assets",
 	// 	http.MethodGet,
-	// 	"/",
-	// 	HomePage,
+	// 	"/assets/gfmstyle.css",
+	// 	Gfmstyle,
 	// },
 	Route{
 		"allBank",
@@ -43,7 +50,7 @@ var routes = Routes{
 	}, Route{
 		"getBankByID",
 		http.MethodGet,
-		"/bank/{bankid}",
+		"/bank/{id}",
 		SearchBankByID,
 	}, Route{
 		"getbankByName",
@@ -57,6 +64,11 @@ var routes = Routes{
 		http.MethodGet,
 		"/user",
 		GetAllUser,
+	}, Route{
+		"SearchUserByID",
+		http.MethodGet,
+		"/user/{id}",
+		SearchUserByID,
 	}, Route{
 		"CreateUser",
 		http.MethodPost,
@@ -75,68 +87,78 @@ var routes = Routes{
 	},
 	// Account
 	Route{
-		"allUser",
+		"allAccount",
 		http.MethodGet,
-		"/user",
-		GetAllUser,
+		"/account",
+		GetAllAccount,
 	}, Route{
-		"CreateUser",
+		"SearchAccountByID",
+		http.MethodGet,
+		"/account/{id}",
+		SearchAccountByID,
+	}, Route{
+		"CreateAccount",
 		http.MethodPost,
-		"/user",
-		CreateUser,
+		"/account",
+		CreateAccount,
 	}, Route{
-		"UpdateUser",
+		"UpdateAccount",
 		http.MethodPut,
-		"/user",
-		UpdateUser,
+		"/account",
+		UpdateAccount,
 	}, Route{
-		"DeleteUserID",
+		"DeleteAccountID",
 		http.MethodDelete,
-		"/user/{id}",
-		DeleteUserID,
+		"/account/{id}",
+		DeleteAccountID,
+	}, Route{
+		"DeleteAccountByNumber",
+		http.MethodDelete,
+		"/account/number/{number}",
+		DeleteAccountByNumber,
 	},
 	// transaction
 	Route{
 		"allTransaction",
 		http.MethodGet,
-		"/Transaction",
+		"/transaction",
 		GetAllTransaction,
 	}, Route{
 		"CreateTransaction",
 		http.MethodPost,
-		"/Transaction",
+		"/transaction",
 		CreateTransaction,
 	}, Route{
 		"UpdateTransaction",
 		http.MethodPut,
-		"/Transaction",
+		"/transaction",
 		UpdateTransaction,
 	}, Route{
 		"DeleteTransactionID",
 		http.MethodDelete,
-		"/Transaction/{id}",
+		"/transaction/{id}",
 		DeleteTransactionID,
 	},
 	// type de transaction
 	Route{
 		"allTransactionType",
 		http.MethodGet,
-		"/TransactionType",
+		"/transactionType",
 		GetAllTransactionType,
 	}, Route{
 		"CreateTransactionType",
 		http.MethodPost,
-		"/TransactionType",
+		"/transactionType",
 		CreateTransactionType,
 	}, Route{
 		"UpdateTransactionType",
 		http.MethodPut,
-		"/TransactionType",
+		"/transactionType",
 		UpdateTransactionType,
 	}, Route{
 		"DeleteTransactionTypeID",
 		http.MethodDelete,
-		"/TransactionType/{id}",
+		"/transactionType/{id}",
 		DeleteTransactionTypeID,
 	},
 }
