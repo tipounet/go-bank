@@ -28,8 +28,3 @@ func HomePage(w http.ResponseWriter, r *http.Request) {
 		w.Write(bytes.NewBufferString("</article></body></html>").Bytes())
 	}
 }
-
-// Gfmstyle : refourgue la css Gfmstyle
-// func Gfmstyle(w http.ResponseWriter, r *http.Request) {
-// 	gfmstyle.Assets
-// }
