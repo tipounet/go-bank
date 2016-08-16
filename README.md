@@ -1,6 +1,9 @@
 # go-bank
 API REST go pour gestion de compte basique
 
+## Installation
+go get -u github.com/tipounet/go-bank
+
 ## Configuration
 La connexion à la base de données ainsi que le port d'écoute HTTP sont configurables dans le fichier application.yaml (le context http n'est pas encore pris en compte).
 
