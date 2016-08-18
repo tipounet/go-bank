@@ -17,10 +17,10 @@ import (
 
 var transactionService service.TransactionService
 
-func initTransactionService() {
+func init() {
 	if transactionService.Dao == nil {
 		dao := dao.TransactionDao{
-			DB: dao.DbConnect(),
+			DB: dao.GetDbConnexion(),
 		}
 		transactionService = service.TransactionService{
 			Dao: &dao,
@@ -30,7 +30,6 @@ func initTransactionService() {
 
 // GetAllTransaction : service qui retourne la liste complète des comptes
 func GetAllTransaction(w http.ResponseWriter, r *http.Request) {
-	initTransactionService()
 	accounts, _ := transactionService.Read()
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusOK)
@@ -39,7 +38,6 @@ func GetAllTransaction(w http.ResponseWriter, r *http.Request) {
 
 //SearchTransactionByID :tous est dans le nom
 func SearchTransactionByID(w http.ResponseWriter, r *http.Request) {
-	initTransactionService()
 	vars := mux.Vars(r)
 	stringID := vars["id"]
 	ID, e := strconv.Atoi(stringID)
@@ -61,7 +59,6 @@ func SearchTransactionByID(w http.ResponseWriter, r *http.Request) {
 
 // CreateTransaction : Réponse sur requete POST a /user avec l'utilisateur en JSON dans le body
 func CreateTransaction(w http.ResponseWriter, r *http.Request) {
-	initTransactionService()
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
 	var transaction model.Transaction
@@ -88,7 +85,6 @@ func CreateTransaction(w http.ResponseWriter, r *http.Request) {
 
 // UpdateTransaction : Mise a jour d'une transaction
 func UpdateTransaction(w http.ResponseWriter, r *http.Request) {
-	initTransactionService()
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
 	var transaction model.Transaction
@@ -134,4 +130,4 @@ func DeleteTransactionID(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// TODO : ajouter les méthodes de recherches en plus du standar (searchby bank, user etc)
+// TODO : ajouter les méthodes de recherches en plus du standard (searchby bank, user etc)

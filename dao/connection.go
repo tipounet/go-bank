@@ -3,14 +3,13 @@ package dao
 import (
 	"strconv"
 
-	pg "gopkg.in/pg.v4"
 	"github.com/tipounet/go-bank/configuration"
+	pg "gopkg.in/pg.v4"
 )
 
 var db *pg.DB
 
-// DbConnect : connection à la base de données
-func DbConnect() *pg.DB {
+func init() {
 	conf := configuration.GetConfiguration()
 	if db == nil {
 		db = pg.Connect(&pg.Options{
@@ -20,5 +19,9 @@ func DbConnect() *pg.DB {
 			Database: conf.Pg.Schema,
 		})
 	}
+}
+
+// GetDbConnexion : connection à la base de données
+func GetDbConnexion() *pg.DB {
 	return db
 }

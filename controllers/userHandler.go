@@ -17,10 +17,10 @@ import (
 
 var userService service.UserService
 
-func initUserService() {
+func init() {
 	if userService.Dao == nil {
 		dao := dao.UserDao{
-			DB: dao.DbConnect(),
+			DB: dao.GetDbConnexion(),
 		}
 		userService = service.UserService{
 			Dao: &dao,
@@ -30,7 +30,6 @@ func initUserService() {
 
 // GetAllUser : service qui retourne la liste complète des utilisateurs
 func GetAllUser(w http.ResponseWriter, r *http.Request) {
-	initUserService()
 	users, _ := userService.Read()
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusOK)
@@ -39,7 +38,6 @@ func GetAllUser(w http.ResponseWriter, r *http.Request) {
 
 //SearchUserByID :tous est dans le nom
 func SearchUserByID(w http.ResponseWriter, r *http.Request) {
-	initUserService()
 	vars := mux.Vars(r)
 	stringID := vars["id"]
 	// FIXME : comment je passe d'une string à un int64 ?
@@ -62,7 +60,6 @@ func SearchUserByID(w http.ResponseWriter, r *http.Request) {
 
 // CreateUser : Réponse sur requete POST a /user avec l'utilisateur en JSON dans le body
 func CreateUser(w http.ResponseWriter, r *http.Request) {
-	initUserService()
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
 	var user model.User
@@ -89,7 +86,6 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 
 // UpdateUser : Mise a jour d'un utilisateur
 func UpdateUser(w http.ResponseWriter, r *http.Request) {
-	initUserService()
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
 	var user model.User

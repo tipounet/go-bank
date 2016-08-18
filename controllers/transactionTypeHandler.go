@@ -17,10 +17,10 @@ import (
 
 var transactionTypeService service.TransactionTypeService
 
-func initTransactionTypeService() {
+func init() {
 	if transactionTypeService.Dao == nil {
 		dao := dao.TransactionTypeDao{
-			DB: dao.DbConnect(),
+			DB: dao.GetDbConnexion(),
 		}
 		transactionTypeService = service.TransactionTypeService{
 			Dao: &dao,
@@ -30,7 +30,6 @@ func initTransactionTypeService() {
 
 // GetAllTransactionType : service qui retourne la liste complète des comptes
 func GetAllTransactionType(w http.ResponseWriter, r *http.Request) {
-	initTransactionTypeService()
 	tts, _ := transactionTypeService.Read()
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusOK)
@@ -39,7 +38,6 @@ func GetAllTransactionType(w http.ResponseWriter, r *http.Request) {
 
 //SearchTransactionTypeByID :tous est dans le nom
 func SearchTransactionTypeByID(w http.ResponseWriter, r *http.Request) {
-	initTransactionTypeService()
 	vars := mux.Vars(r)
 	stringID := vars["id"]
 	ID, e := strconv.Atoi(stringID)
@@ -61,7 +59,6 @@ func SearchTransactionTypeByID(w http.ResponseWriter, r *http.Request) {
 
 // CreateTransactionType : Réponse sur requete POST a /typeTransaction
 func CreateTransactionType(w http.ResponseWriter, r *http.Request) {
-	initTransactionTypeService()
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
 	var ttype model.TransactionType
@@ -88,7 +85,6 @@ func CreateTransactionType(w http.ResponseWriter, r *http.Request) {
 
 // UpdateTransactionType : Mise a jour d'un type de transaction
 func UpdateTransactionType(w http.ResponseWriter, r *http.Request) {
-	initTransactionTypeService()
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
 	var tt model.TransactionType
@@ -134,4 +130,4 @@ func DeleteTransactionTypeID(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// TODO : ajouter les méthodes de recherches en plus du standar (searchby bank, user etc)
+// TODO : ajouter les méthodes de recherches en plus du standard (searchby bank, user etc)
