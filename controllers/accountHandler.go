@@ -17,10 +17,10 @@ import (
 
 var accountService service.AccountService
 
-func initAccountService() {
+func init() {
 	if accountService.Dao == nil {
 		dao := dao.AccountDao{
-			DB: dao.DbConnect(),
+			DB: dao.GetDbConnexion(),
 		}
 		accountService = service.AccountService{
 			Dao: &dao,
@@ -30,7 +30,6 @@ func initAccountService() {
 
 // GetAllAccount : service qui retourne la liste complète des comptes
 func GetAllAccount(w http.ResponseWriter, r *http.Request) {
-	initAccountService()
 	accounts, _ := accountService.Read()
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusOK)
@@ -39,7 +38,6 @@ func GetAllAccount(w http.ResponseWriter, r *http.Request) {
 
 //SearchAccountByID :tous est dans le nom
 func SearchAccountByID(w http.ResponseWriter, r *http.Request) {
-	initAccountService()
 	vars := mux.Vars(r)
 	stringID := vars["id"]
 	// FIXME : comment je passe d'une string à un int64 ?
@@ -62,7 +60,6 @@ func SearchAccountByID(w http.ResponseWriter, r *http.Request) {
 
 // CreateAccount : Réponse sur requete POST a /account avec l'utilisateur en JSON dans le body
 func CreateAccount(w http.ResponseWriter, r *http.Request) {
-	initAccountService()
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
 	var account model.Account
@@ -89,7 +86,6 @@ func CreateAccount(w http.ResponseWriter, r *http.Request) {
 
 // UpdateAccount : Mise a jour d'un utilisateur
 func UpdateAccount(w http.ResponseWriter, r *http.Request) {
-	initAccountService()
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
 	var account model.Account

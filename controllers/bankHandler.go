@@ -17,10 +17,10 @@ import (
 
 var bankService service.BankService
 
-func initBankService() {
+func init() {
 	if bankService.Dao == nil {
 		dao := dao.BankDao{
-			DB: dao.DbConnect(),
+			DB: dao.GetDbConnexion(),
 		}
 		bankService = service.BankService{
 			Dao: &dao,
@@ -30,7 +30,6 @@ func initBankService() {
 
 // GetAllBanK : service qui retourne la liste complète des banques
 func GetAllBanK(w http.ResponseWriter, r *http.Request) {
-	initBankService()
 	banks, _ := bankService.Get()
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusOK)
@@ -39,7 +38,6 @@ func GetAllBanK(w http.ResponseWriter, r *http.Request) {
 
 //SearchBankByID :tous est dans le nom
 func SearchBankByID(w http.ResponseWriter, r *http.Request) {
-	initBankService()
 	vars := mux.Vars(r)
 	stringID := vars["id"]
 	// FIXME : comment je passe d'une string à un int64 ?
@@ -63,7 +61,6 @@ func SearchBankByID(w http.ResponseWriter, r *http.Request) {
 //SearchBankByName :tous est dans le nom
 func SearchBankByName(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	initBankService()
 	vars := mux.Vars(r)
 	name := vars["name"]
 	if name == "" {
@@ -85,7 +82,6 @@ func SearchBankByName(w http.ResponseWriter, r *http.Request) {
 
 // CreateBank : Réponse sur requete POST a /bank avec la bank en JSON dans le body
 func CreateBank(w http.ResponseWriter, r *http.Request) {
-	initBankService()
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
 	var bank model.Bank
@@ -112,7 +108,6 @@ func CreateBank(w http.ResponseWriter, r *http.Request) {
 
 // UpdateBank : Mise a jour d'une banque
 func UpdateBank(w http.ResponseWriter, r *http.Request) {
-	initBankService()
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
 	var bank model.Bank

@@ -1,10 +1,8 @@
 package dao
 
 import (
-	"fmt"
-
-	pg "gopkg.in/pg.v4"
 	"github.com/tipounet/go-bank/model"
+	pg "gopkg.in/pg.v4"
 )
 
 // AccountDao : la dao d'un compte bancaire.
@@ -105,9 +103,6 @@ func setAccountForeignData(accounts []model.Account, db *pg.DB) {
 		b, eb := getBankByID(a.Bankid, db)
 		if eb == nil {
 			tmp.Bank = b
-			fmt.Println("ona une bank c'est chouette ", b)
-		} else {
-			fmt.Println("pas de bank pour nous :'()'")
 		}
 	}
 }
