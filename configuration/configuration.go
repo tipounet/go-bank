@@ -2,6 +2,7 @@ package configuration
 
 import (
 	"io/ioutil"
+	"log"
 
 	"gopkg.in/yaml.v2"
 )
@@ -23,13 +24,17 @@ type HTTPConfiguration struct {
 
 // Configuration : structure contenant les paramètres de configuration de l'application
 type Configuration struct {
-	Pg   DbConfiguration
-	HTTP HTTPConfiguration
+	Pg          DbConfiguration
+	HTTP        HTTPConfiguration
+	Version     string
+	Prettyprint bool
 }
 
-// GetConfiguration : retourne la configuration de l'application indiquée dans le fichier application.yaml
+var configuration Configuration
+
 // FIXME : retourner une erreur plutôt que les deux panic ?
-func GetConfiguration() (configuration Configuration) {
+func init() {
+	log.Printf("Chargement de la configuration")
 	source, err := ioutil.ReadFile("application.yaml")
 	if err != nil {
 		panic(err)
@@ -38,5 +43,10 @@ func GetConfiguration() (configuration Configuration) {
 	if err != nil {
 		panic(err)
 	}
-	return
+	log.Printf("Configuration de l'application : json %v", configuration.Prettyprint)
+}
+
+// GetConfiguration : retourne la configuration de l'application indiquée dans le fichier application.yaml
+func GetConfiguration() Configuration {
+	return configuration
 }

@@ -11,3 +11,9 @@ pg :
 http :
   port : 8080
   context : /
+
+# Version de l'application qui sera indiquée par l'intégration continue un jour
+version : 666 <|-)
+
+# activation ou non dujson formaté (a des fin de debug)
+prettyprint : true

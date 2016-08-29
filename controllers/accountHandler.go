@@ -31,9 +31,13 @@ func init() {
 // GetAllAccount : service qui retourne la liste complète des comptes
 func GetAllAccount(w http.ResponseWriter, r *http.Request) {
 	accounts, _ := accountService.Read()
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(accounts)
+	// w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	// w.WriteHeader(http.StatusOK)
+	// jsonencoder := json.NewEncoder(w)
+	// FIXME : voir la définition de cette méthode setIndent, quand ça fonctionne il faut un paramètre dans le fichier de conf pour fournir un json avec indentation ou non
+	// jsonencoder.SetIndent()
+	// jsonencoder.Encode(accounts)
+	writeResponse(w, accounts)
 }
 
 //SearchAccountByID :tous est dans le nom

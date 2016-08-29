@@ -17,7 +17,7 @@ func main() {
 	// init de la base de données pour être certain de la fermeture. Reste a voir pour que ce soit automatique à la fin de l'appli ?
 	db := dao.GetDbConnexion()
 	defer db.Close()
-	fmt.Println("Rest API v1.0 - Mux Routers")
+	fmt.Printf("Rest API Bank Account v%s\n", configuration.GetConfiguration().Version)
 	port := strconv.FormatInt(configuration.GetConfiguration().HTTP.Port, 10)
 	fmt.Println("Please visite http://localhost:" + port)
 
