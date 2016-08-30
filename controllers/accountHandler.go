@@ -31,13 +31,7 @@ func init() {
 // GetAllAccount : service qui retourne la liste complète des comptes
 func GetAllAccount(w http.ResponseWriter, r *http.Request) {
 	accounts, _ := accountService.Read()
-	// w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	// w.WriteHeader(http.StatusOK)
-	// jsonencoder := json.NewEncoder(w)
-	// FIXME : voir la définition de cette méthode setIndent, quand ça fonctionne il faut un paramètre dans le fichier de conf pour fournir un json avec indentation ou non
-	// jsonencoder.SetIndent()
-	// jsonencoder.Encode(accounts)
-	writeResponse(w, accounts)
+	writeHTTPJSONResponse(w, accounts)
 }
 
 //SearchAccountByID :tous est dans le nom
@@ -55,17 +49,13 @@ func SearchAccountByID(w http.ResponseWriter, r *http.Request) {
 			log.Println("Erreur sur le select SQL ", err)
 			errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: err.Error()}, http.StatusBadRequest, w)
 		} else {
-			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(accounts)
+			writeHTTPJSONResponse(w, accounts)
 		}
 	}
 }
 
 // CreateAccount : Réponse sur requete POST a /account avec l'utilisateur en JSON dans le body
 func CreateAccount(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-
 	var account model.Account
 	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
 	if err != nil {
@@ -80,8 +70,7 @@ func CreateAccount(w http.ResponseWriter, r *http.Request) {
 				if err := accountService.Create(&account); err != nil {
 					errorResponse(err, http.StatusInternalServerError, w)
 				} else {
-					w.WriteHeader(http.StatusOK)
-					json.NewEncoder(w).Encode(account)
+					writeHTTPJSONResponse(w, account)
 				}
 			}
 		}

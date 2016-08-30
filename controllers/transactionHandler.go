@@ -30,10 +30,11 @@ func init() {
 
 // GetAllTransaction : service qui retourne la liste complète des comptes
 func GetAllTransaction(w http.ResponseWriter, r *http.Request) {
-	accounts, _ := transactionService.Read()
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(accounts)
+	if transaction, e := transactionService.Read(); e != nil {
+		errorResponse(e, http.StatusBadRequest, w)
+	} else {
+		writeHTTPJSONResponse(w, transaction)
+	}
 }
 
 //SearchTransactionByID :tous est dans le nom
@@ -50,17 +51,13 @@ func SearchTransactionByID(w http.ResponseWriter, r *http.Request) {
 			log.Println("Erreur sur le select SQL ", err)
 			errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: err.Error()}, http.StatusBadRequest, w)
 		} else {
-			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(transactions)
+			writeHTTPJSONResponse(w, transactions)
 		}
 	}
 }
 
 // CreateTransaction : Réponse sur requete POST a /user avec l'utilisateur en JSON dans le body
 func CreateTransaction(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-
 	var transaction model.Transaction
 	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
 	if err != nil {
@@ -75,8 +72,7 @@ func CreateTransaction(w http.ResponseWriter, r *http.Request) {
 				if err := transactionService.Create(&transaction); err != nil {
 					errorResponse(err, http.StatusInternalServerError, w)
 				} else {
-					w.WriteHeader(http.StatusOK)
-					json.NewEncoder(w).Encode(transaction)
+					writeHTTPJSONResponse(w, transaction)
 				}
 			}
 		}
@@ -85,8 +81,6 @@ func CreateTransaction(w http.ResponseWriter, r *http.Request) {
 
 // UpdateTransaction : Mise a jour d'une transaction
 func UpdateTransaction(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-
 	var transaction model.Transaction
 	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
 	if err != nil {

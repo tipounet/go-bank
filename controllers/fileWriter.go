@@ -7,7 +7,8 @@ import (
 	"github.com/tipounet/go-bank/configuration"
 )
 
-func writeResponse(w http.ResponseWriter, data interface{}) {
+// writeHTTPJSONResponse : écrit la réponse sous forme de json
+func writeHTTPJSONResponse(w http.ResponseWriter, data interface{}) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusOK)
 

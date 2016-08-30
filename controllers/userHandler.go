@@ -30,10 +30,11 @@ func init() {
 
 // GetAllUser : service qui retourne la liste complète des utilisateurs
 func GetAllUser(w http.ResponseWriter, r *http.Request) {
-	users, _ := userService.Read()
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(users)
+	if users, e := userService.Read(); e != nil {
+		errorResponse(e, http.StatusBadRequest, w)
+	} else {
+		writeHTTPJSONResponse(w, users)
+	}
 }
 
 //SearchUserByID :tous est dans le nom
@@ -51,17 +52,13 @@ func SearchUserByID(w http.ResponseWriter, r *http.Request) {
 			log.Println("Erreur sur le select SQL ", err)
 			errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: err.Error()}, http.StatusBadRequest, w)
 		} else {
-			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(users)
+			writeHTTPJSONResponse(w, users)
 		}
 	}
 }
 
 // CreateUser : Réponse sur requete POST a /user avec l'utilisateur en JSON dans le body
 func CreateUser(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-
 	var user model.User
 	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
 	if err != nil {
@@ -76,8 +73,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 				if err := userService.Create(&user); err != nil {
 					errorResponse(err, http.StatusInternalServerError, w)
 				} else {
-					w.WriteHeader(http.StatusOK)
-					json.NewEncoder(w).Encode(user)
+					writeHTTPJSONResponse(w, user)
 				}
 			}
 		}
@@ -86,8 +82,6 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 
 // UpdateUser : Mise a jour d'un utilisateur
 func UpdateUser(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-
 	var user model.User
 	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
 	if err != nil {
