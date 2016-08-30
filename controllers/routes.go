@@ -22,6 +22,11 @@ func getRoute() Routes {
 			"/",
 			HomePage,
 		}, Route{
+			"Version",
+			http.MethodGet,
+			"/version",
+			getVersion,
+		}, Route{
 			"allBank",
 			http.MethodGet,
 			"/bank",
