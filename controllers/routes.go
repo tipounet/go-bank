@@ -83,6 +83,11 @@ func getRoute() Routes {
 			http.MethodDelete,
 			"/user/{id}",
 			DeleteUserID,
+		}, Route{
+			"UserAuthenticate",
+			http.MethodPost,
+			"/user/authenticate",
+			UserAuthenticate,
 		},
 		// Account
 		Route{

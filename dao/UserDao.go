@@ -2,8 +2,11 @@
 package dao
 
 import (
-	"gopkg.in/pg.v4"
+	"fmt"
+	"log"
+
 	"github.com/tipounet/go-bank/model"
+	"gopkg.in/pg.v4"
 )
 
 // UserDao : accès aux données des utilisateurs
@@ -30,8 +33,8 @@ func (dao UserDao) GetByName(name string) (user []model.User, err error) {
 }
 
 // GetByFirstName : return a user from id
-func (dao UserDao) GetByFirstName(prenom string) (user []model.User, err error) {
-	err = dao.DB.Model(&user).Where("lower(prenom) like concat('%',lower(?),'%')", prenom).Select()
+func (dao UserDao) GetByFirstName(firstName string) (user []model.User, err error) {
+	err = dao.DB.Model(&user).Where("lower(prenom) like concat('%',lower(?),'%')", firstName).Select()
 	return
 }
 
@@ -41,21 +44,54 @@ func (dao UserDao) GetByPartialFirstNameOrName(search string) (user []model.User
 	return
 }
 
-// GetByMail : return user from email
-func (dao UserDao) GetByMail(mail string) (user []model.User, err error) {
-	err = dao.DB.Model(&user).Where("mail = ?", mail).Select()
+// SearchByEmail : return user from email
+func (dao UserDao) SearchByEmail(email string) (retour []model.User, err error) {
+	log.Printf("recherche par mail %v \n", email)
+	err = dao.DB.Model(&retour).Select()
+	// .Where("lower(email) like concat('%',lower(?),'%')", email)
+	// err = dao.DB.Model(&retour).Where("email ='%moogli@phpjungle.info'", email).Select()
+	fmt.Printf("les utilisateurs trouvé(s) : %v\n", retour)
 	return
 }
 
-// GetByPseudo : return user with pseudo "pseudo"
-func (dao UserDao) GetByPseudo(pseudo string) (user []model.User, err error) {
-	err = dao.DB.Model(&user).Where("pseudo = ?", pseudo).Select()
+// SearchByPseudo : return user with pseudo like"%pseudo%"
+func (dao UserDao) SearchByPseudo(pseudo string) (user []model.User, err error) {
+	err = dao.DB.Model(&user).Where("lower(pseudo) like concat('%',lower(?),'%')", pseudo).Select()
+	return
+}
+
+//GetByPseudo : retourne un seul utilisateur a partir de son email
+func (dao UserDao) GetByPseudo(email string) (user model.User, err error) {
+	_, err = dao.DB.QueryOne(&user, "select * from user where pseudo = ?", email)
+	return
+}
+
+//GetByEmail : retourne un seul utilisateur a partir de son email
+func (dao UserDao) GetByEmail(email string) (user model.User, err error) {
+	// FIXME : nil dereference, commenton utilise ce QueryOne, ou alors utiliser model pourun select "one" ?
+	log.Printf("Recherche d'un utilisateur depuis son email %v\n\n", email)
+	defer log.Printf("Utilisateur trouvé %v \n\n", user)
+	// _, err = dao.DB.QueryOne(&retour, "select * from user where email = ?", email)
+	// us, _ := dao.SearchByEmail(email)
+	// user = us[0]
+	user = model.User{
+		UserID: 42,
+		Pseudo: "moogli",
+	}
 	return
 }
 
 // Authenticate Check if pseudo and pwd match
 func (dao UserDao) Authenticate(pseudo string, pwd string) (retour bool, err error) {
 	dao.DB.Prepare("select count(1) from users where pseudo = ? and pwd = ?")
+	// exec + récup + return bool error !
+	retour = true
+	return
+}
+
+// AuthenticateByEmail authentification d'un utilisateur avec son email
+func (dao UserDao) AuthenticateByEmail(pseudo string, pwd string) (retour bool, err error) {
+	dao.DB.Prepare("select count(1) from users where email = ? and pwd = ?")
 	// exec + récup + return bool error !
 	retour = true
 	return

@@ -124,3 +124,76 @@ func DeleteUserID(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 }
+
+//UserAuthenticate : authentification de l'utilisateur, un utilisateur est en paylaod de la requête
+func UserAuthenticate(w http.ResponseWriter, r *http.Request) {
+	var user model.User
+	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
+	if err != nil {
+		errorResponse(err, http.StatusBadRequest, w)
+	} else {
+		if err := r.Body.Close(); err != nil {
+			errorResponse(err, http.StatusBadRequest, w)
+		} else {
+			if err := json.Unmarshal(body, &user); err != nil {
+				errorResponse(err, 422, w)
+			} else {
+				log.Printf("user %v\n\n", user)
+				if isEmptyString(user.Pwd) {
+					log.Printf("Pwd vide : %v", user.Pwd)
+					errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: "Information de connexion (utilisateur ou / ou mot de passe) manquante(s)"}, http.StatusBadRequest, w)
+				} else {
+					var aerr error
+					var retour bool
+					if !isEmptyString(user.Email) {
+						log.Printf("Recherche par email : %v\n", user.Email)
+						retour, aerr = userService.UserAuthenticateByEMail(user.Email, user.Pwd)
+
+					} else if !isEmptyString(user.Pseudo) {
+						log.Printf("Recherche par pseudo : %v\n", user.Email)
+						retour, aerr = userService.UserAuthenticate(user.Pseudo, user.Pwd)
+					} else {
+						log.Printf("Fail y a ni mail ni pseudo %v\n", user)
+						aerr = &HTTPerror{Code: http.StatusBadRequest, Message: "Information de connexion (utilisateur ou / ou mot de passe) manquante(s)"}
+					}
+					log.Printf("le retour de l'authentification %v\n", retour)
+					if aerr != nil {
+						errorResponse(aerr, http.StatusBadRequest, w)
+					} else {
+						if retour {
+							u := getUser(user)
+							log.Printf("L'utilisateur trouvé : %v\n", u)
+							writeHTTPJSONResponse(w, u)
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+// retourne un utilisateur complet depuis un utilisateur avec soit id, soit email soit pseudo si non rien fail !
+func getUser(user model.User) (retour model.User) {
+	// voir si c'est bien la valeur par défaut et surtout ne pas filler de zéro comme id pour l'utilisateur ;)
+	if user.UserID != 0 {
+		retour, _ = userService.Search(user.UserID)
+	} else if !isEmptyString(user.Email) {
+		retour, _ = userService.GetByEmail(user.Email)
+	} else if !isEmptyString(user.Pseudo) {
+		retour, _ = userService.GetByPseudo(user.Pseudo)
+	} else {
+		// epic fail !
+	}
+
+	return
+}
+
+// cette fonction ne fonctionne pas, comment tester correctement qu'une chaine de caractère est vide ????
+func isEmptyString(s string) (retour bool) {
+	retour = true
+	// TODO : voir le fonctionnement du trim en go !
+	if len(s) != 0 {
+		retour = false
+	}
+	return
+}

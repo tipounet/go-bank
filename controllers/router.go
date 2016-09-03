@@ -21,7 +21,9 @@ func NewRouter() *mux.Router {
 			Name(route.Name).
 			Handler(handler)
 	}
-
 	router.PathPrefix("/assets/").Handler(http.StripPrefix("/assets", http.FileServer(gfmstyle.Assets)))
+	// FIXME : howto expose static file (js / html / css / etc...) for webapp ?
+	// => dl du code source de gogs pour voir comment c'est fait leur bazard !
+	// router.PathPrefix("/static/").Handler(http.StripPrefix("/static", http.FileServer(???)))
 	return router
 }
