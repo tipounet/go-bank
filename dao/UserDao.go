@@ -60,19 +60,20 @@ func (dao UserDao) SearchByPseudo(pseudo string) (user []model.User, err error) 
 	return
 }
 
-//GetByPseudo : retourne un seul utilisateur a partir de son email
+//GetByPseudo : retourne un seul utilisateur  àpartir de son email
 func (dao UserDao) GetByPseudo(email string) (user model.User, err error) {
 	_, err = dao.DB.QueryOne(&user, "select * from user where pseudo = ?", email)
 	return
 }
 
-//GetByEmail : retourne un seul utilisateur a partir de son email
+//GetByEmail : retourne un seul utilisateur à partir de son email
 func (dao UserDao) GetByEmail(email string) (user model.User, err error) {
 	// FIXME : nil dereference, commenton utilise ce QueryOne, ou alors utiliser model pourun select "one" ?
-	log.Printf("Recherche d'un utilisateur depuis son email %v\n\n", email)
-	defer log.Printf("Utilisateur trouvé %v \n\n", user)
+	log.Printf("Recherche d'un utilisateur depuis son email %v\n", email)
+	defer log.Printf("Utilisateur trouvé %v \n", user)
 	// _, err = dao.DB.QueryOne(&retour, "select * from user where email = ?", email)
-	// us, _ := dao.SearchByEmail(email)
+	us, _ := dao.SearchByEmail(email)
+	log.Printf("résultat de la recherche par emaiol %v", us)
 	// user = us[0]
 	user = model.User{
 		UserID: 42,

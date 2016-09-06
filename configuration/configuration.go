@@ -34,7 +34,11 @@ var configuration Configuration
 
 // FIXME : retourner une erreur plutôt que les deux panic ?
 func init() {
-	log.Printf("Chargement de la configuration")
+	loadConfiguration()
+}
+
+func loadConfiguration() {
+	log.Println("Chargement de la configuration ...")
 	source, err := ioutil.ReadFile("application.yaml")
 	if err != nil {
 		panic(err)
@@ -43,10 +47,16 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	log.Printf("Configuration de l'application : json %v", configuration.Prettyprint)
+	log.Println("Configuration chargée !")
 }
 
 // GetConfiguration : retourne la configuration de l'application indiquée dans le fichier application.yaml
 func GetConfiguration() Configuration {
 	return configuration
+}
+
+// ReloadConfiguration : rechargement de la configuration de l'application
+func ReloadConfiguration() {
+	log.Println("Rechargement de la configuration demandé")
+	loadConfiguration()
 }

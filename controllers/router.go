@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"go/build"
+	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -25,5 +27,17 @@ func NewRouter() *mux.Router {
 	// FIXME : howto expose static file (js / html / css / etc...) for webapp ?
 	// => dl du code source de gogs pour voir comment c'est fait leur bazard !
 	// router.PathPrefix("/static/").Handler(http.StripPrefix("/static", http.FileServer(???)))
+	getStaticPath()
 	return router
+}
+
+func getStaticPath() string {
+	p, err := build.Import("github.com/tipounet/go-bank", "", build.FindOnly)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	log.Printf("type de p : %T", p)
+	h := http.Dir(p.Dir)
+	log.Printf("Type de h : %T", h)
+	return ""
 }
