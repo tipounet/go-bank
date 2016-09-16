@@ -1,32 +1,30 @@
 package dao
 
 import (
+	"github.com/jinzhu/gorm"
 	"github.com/tipounet/go-bank/model"
-	pg "gopkg.in/pg.v4"
 )
 
 // AccountDao : la dao d'un compte bancaire.
 type AccountDao struct {
-	DB *pg.DB
+	DB *gorm.DB
 }
 
 // GetAll : on récupère Tout
 // FIXME : voir comment on fait pour les relations entre table. pour le moment epic fail :'
 func (dao AccountDao) GetAll() (accounts []model.Account, err error) {
-	err = dao.DB.Model(&accounts).
-		Select()
-	setAccountForeignData(accounts, dao.DB)
+	err = dao.DB.Preload("User").Preload("Bank").Order("accountnumber asc").Find(&accounts).Error
+	// setAccountForeignData(accounts, dao.DB)
 	return
 }
 
 // SearchByID : get account by ID
 func (dao AccountDao) SearchByID(id int64) (account model.Account, err error) {
-	err = dao.DB.Model(&account).
-		Where("bankaccountid = ?", id).
-		Select()
+	err = dao.DB.Order("accountnumber asc").First(&account, id).Error
+	// FIXME : delete this !
 	u, _ := getUserByID(account.UserID, dao.DB)
 	account.User = u
-	b, _ := getBankByID(account.Bankid, dao.DB)
+	b, _ := getBankByID(account.BankID, dao.DB)
 	account.Bank = b
 	return
 }
@@ -35,48 +33,48 @@ func (dao AccountDao) SearchByID(id int64) (account model.Account, err error) {
 
 // SearchByNumber search bank account from partial account number
 func (dao AccountDao) SearchByNumber(accountNumber string) (accounts []model.Account, err error) {
-	err = dao.DB.Model(&accounts).
-		Where("accountnumber = ?", accountNumber).
-		Select()
-	setAccountForeignData(accounts, dao.DB)
+	err = dao.DB.Where("accountnumber = ?", accountNumber).Order("accountnumber asc").Find(accounts).Error
+	// setAccountForeignData(accounts, dao.DB)
 	return
 }
 
 // SearchByUser search bank account for a user
+// FIXME : rename la focntion  serachByUserID
 func (dao AccountDao) SearchByUser(id int64) (accounts []model.Account, err error) {
-	err = dao.DB.Model(&accounts).
-		Where("userid = ?", id).
-		Select()
+	err = dao.DB.Where("userid = ?", id).Find(accounts).Error
+	// FIXME : delete this
 	setAccountForeignData(accounts, dao.DB)
 	return
 }
 
 // SearchByBank search bank account for a bank
 func (dao AccountDao) SearchByBank(id int64) (accounts []model.Account, err error) {
-	err = dao.DB.Model(&accounts).
-		Where("bankid = ?", id).
-		Select()
+	err = dao.DB.Where("bankid = ?", id).Find(accounts).Error
 	setAccountForeignData(accounts, dao.DB)
 	return
 }
 
 // Create : création d'un compte
-func (dao AccountDao) Create(account *model.Account) error {
-	return dao.DB.Create(account)
+// FIXME : voir si je dois ounon garder le set avec la suppression de la sauvegarde des associations
+func (dao AccountDao) Create(account *model.Account) (err error) {
+	err = dao.DB.Set("gorm:save_associations", false).Create(account).Error
+	return
 }
 
 // Update : osef
-func (dao AccountDao) Update(account *model.Account) error {
-	return dao.DB.Update(account)
+func (dao AccountDao) Update(account *model.Account) (err error) {
+	err = dao.DB.Set("gorm:save_associations", false).Save(account).Error
+	return
 }
 
 //Delete : suppression d'un compte
-func (dao AccountDao) Delete(account *model.Account) error {
-	return dao.DB.Delete(account)
+func (dao AccountDao) Delete(account *model.Account) (err error) {
+	err = dao.DB.Delete(account).Error
+	return
 }
 
 // fonction privées
-func getUserByID(id int64, db *pg.DB) (model.User, error) {
+func getUserByID(id int64, db *gorm.DB) (model.User, error) {
 	udao := UserDao{
 		DB: db,
 	}
@@ -84,7 +82,7 @@ func getUserByID(id int64, db *pg.DB) (model.User, error) {
 }
 
 // getBankByID : recherche d'une bank depuis son id
-func getBankByID(id int64, db *pg.DB) (model.Bank, error) {
+func getBankByID(id int64, db *gorm.DB) (model.Bank, error) {
 	bdao := BankDao{
 		DB: db,
 	}
@@ -92,7 +90,7 @@ func getBankByID(id int64, db *pg.DB) (model.Bank, error) {
 }
 
 // setUser : récuèpre un utilisateur depuis son ID
-func setAccountForeignData(accounts []model.Account, db *pg.DB) {
+func setAccountForeignData(accounts []model.Account, db *gorm.DB) {
 	for i, a := range accounts {
 		tmp := &accounts[i]
 		u, e := getUserByID(a.UserID, db)
@@ -100,7 +98,7 @@ func setAccountForeignData(accounts []model.Account, db *pg.DB) {
 			tmp.User = u
 		}
 
-		b, eb := getBankByID(a.Bankid, db)
+		b, eb := getBankByID(a.BankID, db)
 		if eb == nil {
 			tmp.Bank = b
 		}

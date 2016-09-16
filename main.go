@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 
+	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/tipounet/go-bank/configuration"
 	"github.com/tipounet/go-bank/controllers"
 	"github.com/tipounet/go-bank/dao"

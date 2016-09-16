@@ -164,9 +164,29 @@ Path | Méthode | Description
 # TODO
 
 * i18n
-* webapp dans le projet
+* webapp dans le projet ?
 * page index avec description du projet (swagger ?)
-* authentification avec JWT entre font et back ?
-* Gestion des services avec et sans authentifications
-* Tests unitaires
+* authentification avec JWT entre front et back ?
+* Gestion des services avec et sans authentifications (version / auth sont sans authentification)
+* Tests unitaires (on fait comment ? on peu mock /stub ?)
 * Meilleur gestion des erreurs go renvoyées (code, format etc.)
+* Récupérer les erreurs de gorm pour les exploiter ensuite : ok ?
+* Ajouter l'utilisation des entêtes range / total sur les service get
+* Ajouter code retour partial content (206) ou 200 sur les services avec pagination (donc faire des services avec pagination au besoin)
+* Ajouter documentation pour insertion pour chaque service (surtout pour ceux qui ont des FK les autres ça change rien)
+
+# Exemple d'insertion
+problème avec gorm, pour l'insertion des données il va pas chercher dans les objets lié les fk, du coup il ui faut les colonnes dans l'objet.
+
+pour insérer une transaction
+``` json
+{
+ "description": "Test insertion depuis client rest N°2",
+ "Posteddate": "2016-09-16T00:13:00Z",
+ "userdate": "2016-07-16T07:13:00Z",
+ "fiid": "dsddzez4564",
+ "amount": 4242,
+ "accountID":1,
+ "typeID":1
+}
+```

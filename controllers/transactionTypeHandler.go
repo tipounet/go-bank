@@ -45,13 +45,17 @@ func SearchTransactionTypeByID(w http.ResponseWriter, r *http.Request) {
 	if e != nil {
 		errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: "Paramètre name obligatoire non vide"}, http.StatusBadRequest, w)
 	} else {
-		types, err := transactionTypeService.SearchByID(int64(ID))
+		tt, err := transactionTypeService.SearchByID(int64(ID))
 		if err != nil {
 			// FIXME meilleur Message
 			log.Println("Erreur sur le select SQL ", err)
 			errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: err.Error()}, http.StatusBadRequest, w)
 		} else {
-			writeHTTPJSONResponse(w, types)
+			if tt.TransactionTypeID == 0 {
+				errorResponse(&HTTPerror{Code: http.StatusNotFound, Message: "Unknown Transaction type for ID " + stringID}, http.StatusNotFound, w)
+			} else {
+				writeHTTPJSONResponse(w, tt)
+			}
 		}
 	}
 }
@@ -95,7 +99,7 @@ func UpdateTransactionType(w http.ResponseWriter, r *http.Request) {
 				if err := transactionTypeService.Update(&tt); err != nil {
 					errorResponse(err, http.StatusInternalServerError, w)
 				} else {
-					w.WriteHeader(http.StatusOK)
+					w.WriteHeader(http.StatusNoContent)
 				}
 			}
 		}
@@ -114,11 +118,11 @@ func DeleteTransactionTypeID(w http.ResponseWriter, r *http.Request) {
 			msg := "Erreur de conversion\n" + errConv.Error()
 			errorResponse(&HTTPerror{Code: http.StatusInternalServerError, Message: msg}, http.StatusBadRequest, w)
 		} else {
-			if err := transactionTypeService.Delete(&model.TransactionType{ID: int64(ID)}); err != nil {
+			if err := transactionTypeService.Delete(&model.TransactionType{TransactionTypeID: int64(ID)}); err != nil {
 				msg := "Suppresion du type de transaction `" + string(ID) + "` impossible. \n" + err.Error()
 				errorResponse(&HTTPerror{Code: http.StatusInternalServerError, Message: msg}, http.StatusBadRequest, w)
 			} else {
-				w.WriteHeader(http.StatusOK)
+				w.WriteHeader(http.StatusNoContent)
 			}
 		}
 	}

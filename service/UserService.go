@@ -51,12 +51,12 @@ func (service UserService) SearchByPseudo(pseudo string) ([]model.User, error) {
 }
 
 // UserAuthenticate : authentification d'un utilisateur a partir de son pseudo et son mot de passe
-func (service UserService) UserAuthenticate(pseudo string, pwd string) (retour bool, err error) {
+func (service UserService) UserAuthenticate(pseudo string, pwd string) (retour model.User, err error) {
 	return service.Dao.Authenticate(pseudo, pwd)
 }
 
 // UserAuthenticateByEMail : authentification d'un utilisateur a partir de son email et son mot de passe
-func (service UserService) UserAuthenticateByEMail(mail string, pwd string) (retour bool, err error) {
+func (service UserService) UserAuthenticateByEMail(mail string, pwd string) (retour model.User, err error) {
 	return service.Dao.AuthenticateByEmail(mail, pwd)
 }
 

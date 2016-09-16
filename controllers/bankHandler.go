@@ -45,15 +45,20 @@ func SearchBankByID(w http.ResponseWriter, r *http.Request) {
 	// FIXME : comment je passe d'une string à un int64 ?
 	ID, e := strconv.Atoi(stringID)
 	if e != nil {
-		errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: "Paramètre name obligatoire non vide"}, http.StatusBadRequest, w)
+		errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: "Paramètre ID obligatoire non vide"}, http.StatusBadRequest, w)
 	} else {
-		banks, err := bankService.Search(int64(ID))
+		bank, err := bankService.Search(int64(ID))
 		if err != nil {
 			// FIXME meilleur Message
 			log.Println("Erreur sur le select SQL ", err)
 			errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: err.Error()}, http.StatusBadRequest, w)
 		} else {
-			writeHTTPJSONResponse(w, banks)
+			// FIXME : c'est foireux faudrait voir pour une gestion d'erreur peux mieux, sont où les exceptions ??????
+			if bank.Name == "" {
+				errorResponse(&HTTPerror{Code: http.StatusNotFound, Message: "Unknown bank for ID " + stringID}, http.StatusNotFound, w)
+			} else {
+				writeHTTPJSONResponse(w, bank)
+			}
 		}
 	}
 }
@@ -116,7 +121,7 @@ func UpdateBank(w http.ResponseWriter, r *http.Request) {
 				if err := bankService.Update(&bank); err != nil {
 					errorResponse(err, http.StatusInternalServerError, w)
 				} else {
-					w.WriteHeader(http.StatusOK)
+					w.WriteHeader(http.StatusNoContent)
 				}
 			}
 		}
@@ -135,11 +140,11 @@ func DeleteBankID(w http.ResponseWriter, r *http.Request) {
 			msg := "Erreur de conversion\n" + errConv.Error()
 			errorResponse(&HTTPerror{Code: http.StatusInternalServerError, Message: msg}, http.StatusBadRequest, w)
 		} else {
-			if err := bankService.Delete(&model.Bank{Bankid: int64(ID)}); err != nil {
+			if err := bankService.Delete(&model.Bank{BankID: int64(ID)}); err != nil {
 				msg := "Suppresion de la banque d'id `" + string(ID) + "` impossible. \n" + err.Error()
 				errorResponse(&HTTPerror{Code: http.StatusInternalServerError, Message: msg}, http.StatusBadRequest, w)
 			} else {
-				w.WriteHeader(http.StatusOK)
+				w.WriteHeader(http.StatusNoContent)
 			}
 		}
 	}

@@ -13,7 +13,7 @@ http :
   context : /
 
 # Version de l'application qui sera indiquée par l'intégration continue un jour
-version : 666 <|-)
+version : 1.0.0-SNAPSHOT
 
-# activation ou non dujson formaté (a des fin de debug)
+# activation ou non du json formaté (a des fin de debug)
 prettyprint : true

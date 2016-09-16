@@ -45,13 +45,23 @@ func SearchTransactionByID(w http.ResponseWriter, r *http.Request) {
 	if e != nil {
 		errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: "Paramètre name obligatoire non vide"}, http.StatusBadRequest, w)
 	} else {
-		transactions, err := transactionService.SearchByID(int64(ID))
+		transaction, err := transactionService.SearchByID(int64(ID))
 		if err != nil {
 			// FIXME meilleur Message
-			log.Println("Erreur sur le select SQL ", err)
-			errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: err.Error()}, http.StatusBadRequest, w)
+			log.Printf("Erreur SQL %v \n", err)
+			// Le errorResponse est dupliqué parce si j'essai httpCode := http.StatusNotFound
+			// Le compilateur couine soit parce qu'il veux pas passer d'un int à un int64 soit l'linverse suivant le type que je donne a httpCode ...
+			if err.Error() == "record not found" {
+				errorResponse(&HTTPerror{Code: http.StatusNotFound, Message: "Unknown transaction for ID " + stringID}, http.StatusNotFound, w)
+			} else {
+				errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: err.Error()}, http.StatusBadRequest, w)
+			}
 		} else {
-			writeHTTPJSONResponse(w, transactions)
+			if transaction.Transactionid == 0 {
+				errorResponse(&HTTPerror{Code: http.StatusNotFound, Message: "Unknown transaction for ID " + stringID}, http.StatusNotFound, w)
+			} else {
+				writeHTTPJSONResponse(w, transaction)
+			}
 		}
 	}
 }
@@ -60,6 +70,7 @@ func SearchTransactionByID(w http.ResponseWriter, r *http.Request) {
 func CreateTransaction(w http.ResponseWriter, r *http.Request) {
 	var transaction model.Transaction
 	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
+	log.Printf("\n\nle JSON : %v\n\n", string(body))
 	if err != nil {
 		errorResponse(err, http.StatusBadRequest, w)
 	} else {
@@ -69,6 +80,7 @@ func CreateTransaction(w http.ResponseWriter, r *http.Request) {
 			if err := json.Unmarshal(body, &transaction); err != nil {
 				errorResponse(err, 422, w)
 			} else {
+				log.Printf("on essai d'insérer ça %T %v \n\n", transaction, transaction)
 				if err := transactionService.Create(&transaction); err != nil {
 					errorResponse(err, http.StatusInternalServerError, w)
 				} else {
@@ -95,7 +107,7 @@ func UpdateTransaction(w http.ResponseWriter, r *http.Request) {
 				if err := transactionService.Update(&transaction); err != nil {
 					errorResponse(err, http.StatusInternalServerError, w)
 				} else {
-					w.WriteHeader(http.StatusOK)
+					w.WriteHeader(http.StatusNoContent)
 				}
 			}
 		}
@@ -118,7 +130,7 @@ func DeleteTransactionID(w http.ResponseWriter, r *http.Request) {
 				msg := "Suppresion du compte d'id `" + string(ID) + "` impossible. \n" + err.Error()
 				errorResponse(&HTTPerror{Code: http.StatusInternalServerError, Message: msg}, http.StatusBadRequest, w)
 			} else {
-				w.WriteHeader(http.StatusOK)
+				w.WriteHeader(http.StatusNoContent)
 			}
 		}
 	}

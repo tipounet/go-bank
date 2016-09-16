@@ -43,13 +43,17 @@ func SearchAccountByID(w http.ResponseWriter, r *http.Request) {
 	if e != nil {
 		errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: "Paramètre name obligatoire non vide"}, http.StatusBadRequest, w)
 	} else {
-		accounts, err := accountService.SearchByID(int64(ID))
+		account, err := accountService.SearchByID(int64(ID))
 		if err != nil {
 			// FIXME meilleur Message
 			log.Println("Erreur sur le select SQL ", err)
 			errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: err.Error()}, http.StatusBadRequest, w)
 		} else {
-			writeHTTPJSONResponse(w, accounts)
+			if account.BankaccountID == 0 {
+				errorResponse(&HTTPerror{Code: http.StatusNotFound, Message: "Unknown Account for ID " + stringID}, http.StatusNotFound, w)
+			} else {
+				writeHTTPJSONResponse(w, account)
+			}
 		}
 	}
 }
@@ -95,7 +99,7 @@ func UpdateAccount(w http.ResponseWriter, r *http.Request) {
 				if err := accountService.Update(&account); err != nil {
 					errorResponse(err, http.StatusInternalServerError, w)
 				} else {
-					w.WriteHeader(http.StatusOK)
+					w.WriteHeader(http.StatusNoContent)
 				}
 			}
 		}
@@ -114,11 +118,11 @@ func DeleteAccountID(w http.ResponseWriter, r *http.Request) {
 			msg := "Erreur de conversion\n" + errConv.Error()
 			errorResponse(&HTTPerror{Code: http.StatusInternalServerError, Message: msg}, http.StatusBadRequest, w)
 		} else {
-			if err := accountService.Delete(&model.Account{Bankaccountid: int64(ID)}); err != nil {
+			if err := accountService.Delete(&model.Account{BankaccountID: int64(ID)}); err != nil {
 				msg := "Suppresion du compte d'id `" + string(ID) + "` impossible. \n" + err.Error()
 				errorResponse(&HTTPerror{Code: http.StatusInternalServerError, Message: msg}, http.StatusBadRequest, w)
 			} else {
-				w.WriteHeader(http.StatusOK)
+				w.WriteHeader(http.StatusNoContent)
 			}
 		}
 	}
@@ -135,7 +139,7 @@ func DeleteAccountByNumber(w http.ResponseWriter, r *http.Request) {
 			msg := "Suppresion du compte numéro `" + accountNumber + "` impossible. \n" + err.Error()
 			errorResponse(&HTTPerror{Code: http.StatusInternalServerError, Message: msg}, http.StatusBadRequest, w)
 		} else {
-			w.WriteHeader(http.StatusOK)
+			w.WriteHeader(http.StatusNoContent)
 		}
 	}
 }

@@ -46,13 +46,17 @@ func SearchUserByID(w http.ResponseWriter, r *http.Request) {
 	if e != nil {
 		errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: "Paramètre id obligatoire non vide"}, http.StatusBadRequest, w)
 	} else {
-		users, err := userService.Search(int64(ID))
+		user, err := userService.Search(int64(ID))
 		if err != nil {
 			// FIXME meilleur Message
 			log.Println("Erreur sur le select SQL ", err)
 			errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: err.Error()}, http.StatusBadRequest, w)
 		} else {
-			writeHTTPJSONResponse(w, users)
+			if user.UserID == 0 {
+				errorResponse(&HTTPerror{Code: http.StatusNotFound, Message: "Unknown User for ID " + stringID}, http.StatusNotFound, w)
+			} else {
+				writeHTTPJSONResponse(w, user)
+			}
 		}
 	}
 }
@@ -96,7 +100,7 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 				if err := userService.Update(&user); err != nil {
 					errorResponse(err, http.StatusInternalServerError, w)
 				} else {
-					w.WriteHeader(http.StatusOK)
+					w.WriteHeader(http.StatusNoContent)
 				}
 			}
 		}
@@ -119,7 +123,7 @@ func DeleteUserID(w http.ResponseWriter, r *http.Request) {
 				msg := "Suppresion du user d'id `" + string(ID) + "` impossible. \n" + err.Error()
 				errorResponse(&HTTPerror{Code: http.StatusInternalServerError, Message: msg}, http.StatusBadRequest, w)
 			} else {
-				w.WriteHeader(http.StatusOK)
+				w.WriteHeader(http.StatusNoContent)
 			}
 		}
 	}
@@ -138,54 +142,45 @@ func UserAuthenticate(w http.ResponseWriter, r *http.Request) {
 			if err := json.Unmarshal(body, &user); err != nil {
 				errorResponse(err, 422, w)
 			} else {
-				log.Printf("user %v\n\n", user)
+				log.Printf("Utilisateur trouvé :  %v\n\n", user)
 				if isEmptyString(user.Pwd) {
 					log.Printf("Pwd vide : %v", user.Pwd)
 					errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: "Information de connexion (utilisateur ou / ou mot de passe) manquante(s)"}, http.StatusBadRequest, w)
 				} else {
 					var aerr error
-					var retour bool
+					var retour model.User
+					authFail := false
 					if !isEmptyString(user.Email) {
 						log.Printf("Recherche par email : %v\n", user.Email)
 						retour, aerr = userService.UserAuthenticateByEMail(user.Email, user.Pwd)
-
+						if aerr != nil {
+							authFail = true
+						}
 					} else if !isEmptyString(user.Pseudo) {
-						log.Printf("Recherche par pseudo : %v\n", user.Email)
+						log.Printf("Recherche par pseudo : %v %v\n", user.Email, user.Pwd)
 						retour, aerr = userService.UserAuthenticate(user.Pseudo, user.Pwd)
+						if aerr != nil {
+							authFail = true
+						}
 					} else {
 						log.Printf("Fail y a ni mail ni pseudo %v\n", user)
 						aerr = &HTTPerror{Code: http.StatusBadRequest, Message: "Information de connexion (utilisateur ou / ou mot de passe) manquante(s)"}
 					}
-					log.Printf("le retour de l'authentification %v\n", retour)
+					log.Printf("le retour de l'authentification %v | erreur : %v\n", retour, aerr)
 					if aerr != nil {
-						errorResponse(aerr, http.StatusBadRequest, w)
-					} else {
-						if retour {
-							u := getUser(user)
-							log.Printf("L'utilisateur trouvé : %v\n", u)
-							writeHTTPJSONResponse(w, u)
+						code := http.StatusBadRequest
+						if authFail {
+							code = http.StatusNotFound
 						}
+						errorResponse(aerr, code, w)
+					} else {
+						log.Printf("L'utilisateur trouvé à la fin: %v\n", retour)
+						writeHTTPJSONResponse(w, retour)
 					}
 				}
 			}
 		}
 	}
-}
-
-// retourne un utilisateur complet depuis un utilisateur avec soit id, soit email soit pseudo si non rien fail !
-func getUser(user model.User) (retour model.User) {
-	// voir si c'est bien la valeur par défaut et surtout ne pas filler de zéro comme id pour l'utilisateur ;)
-	if user.UserID != 0 {
-		retour, _ = userService.Search(user.UserID)
-	} else if !isEmptyString(user.Email) {
-		retour, _ = userService.GetByEmail(user.Email)
-	} else if !isEmptyString(user.Pseudo) {
-		retour, _ = userService.GetByPseudo(user.Pseudo)
-	} else {
-		// epic fail !
-	}
-
-	return
 }
 
 // cette fonction ne fonctionne pas, comment tester correctement qu'une chaine de caractère est vide ????

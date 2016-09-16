@@ -2,7 +2,7 @@ package controllers
 
 import "net/http"
 
-//Route : description d'un route http pour l'api rest
+//Route : description d'une route http pour l'api rest
 type Route struct {
 	Name        string
 	Method      string
@@ -14,6 +14,7 @@ type Route struct {
 type Routes []Route
 
 // getRoute : retourne la liste des routes de l'application
+// TODO : implementer l'utilisation du verbe HTTP options pour chaque ressource histoire de founir l'info
 func getRoute() Routes {
 	return Routes{
 		Route{
@@ -128,6 +129,11 @@ func getRoute() Routes {
 			"/transaction",
 			GetAllTransaction,
 		}, Route{
+			"getTransactionByID",
+			http.MethodGet,
+			"/transaction/{id}",
+			SearchTransactionByID,
+		}, Route{
 			"CreateTransaction",
 			http.MethodPost,
 			"/transaction",
@@ -150,6 +156,11 @@ func getRoute() Routes {
 			"/transactionType",
 			GetAllTransactionType,
 		}, Route{
+			"getTransactionTypeByID",
+			http.MethodGet,
+			"/transactionType/{id}",
+			SearchTransactionTypeByID,
+		}, Route{
 			"CreateTransactionType",
 			http.MethodPost,
 			"/transactionType",
@@ -166,5 +177,4 @@ func getRoute() Routes {
 			DeleteTransactionTypeID,
 		},
 	}
-
 }

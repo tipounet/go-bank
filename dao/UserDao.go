@@ -2,113 +2,108 @@
 package dao
 
 import (
-	"fmt"
-	"log"
-
+	"github.com/jinzhu/gorm"
 	"github.com/tipounet/go-bank/model"
-	"gopkg.in/pg.v4"
 )
 
 // UserDao : accès aux données des utilisateurs
 type UserDao struct {
-	DB *pg.DB
+	DB *gorm.DB
 }
 
 // Get ça c'est le get de UserDao
-func (dao UserDao) Get() (retour []model.User, err error) {
-	err = dao.DB.Model(&retour).Select()
+func (dao UserDao) Get() (users []model.User, err error) {
+	err = dao.DB.Order("nom asc").Find(&users).Error
 	return
 }
 
 // GetByID : return a user from id
 func (dao UserDao) GetByID(id int64) (user model.User, err error) {
-	err = dao.DB.Model(&user).Where("userid=?", id).Select()
+	err = dao.DB.First(&user, id).Error
 	return
 }
 
 // GetByName : return a user from partial name
-func (dao UserDao) GetByName(name string) (user []model.User, err error) {
-	err = dao.DB.Model(&user).Where("lower(nom) like concat('%',lower(?),'%')", name).Select()
+func (dao UserDao) GetByName(name string) (users []model.User, err error) {
+	err = dao.DB.Order("nom asc").Where("lower(nom) like concat('%',lower(?),'%')", name).Find(&users).Error
 	return
 }
 
 // GetByFirstName : return a user from id
-func (dao UserDao) GetByFirstName(firstName string) (user []model.User, err error) {
-	err = dao.DB.Model(&user).Where("lower(prenom) like concat('%',lower(?),'%')", firstName).Select()
+func (dao UserDao) GetByFirstName(firstName string) (users []model.User, err error) {
+	dao.DB.Where("lower(prenom) like concat('%',lower(?),'%')", firstName).Find(&users)
 	return
 }
 
 // GetByPartialFirstNameOrName : return user form partial name or first name
-func (dao UserDao) GetByPartialFirstNameOrName(search string) (user []model.User, err error) {
-	err = dao.DB.Model(&user).Where("lower(prenom) like concat('%',lower(?),'%') or lower(name) like concat('%',lower(?),'%')", search).Select()
+func (dao UserDao) GetByPartialFirstNameOrName(search string) (users []model.User, err error) {
+	err = dao.DB.Where("lower(prenom) like concat('%',lower(?),'%') or lower(name) like concat('%',lower(?),'%')", search).Find(&users).Error
 	return
 }
 
 // SearchByEmail : return user from email
-func (dao UserDao) SearchByEmail(email string) (retour []model.User, err error) {
-	log.Printf("recherche par mail %v \n", email)
-	err = dao.DB.Model(&retour).Select()
-	// .Where("lower(email) like concat('%',lower(?),'%')", email)
-	// err = dao.DB.Model(&retour).Where("email ='%moogli@phpjungle.info'", email).Select()
-	fmt.Printf("les utilisateurs trouvé(s) : %v\n", retour)
+func (dao UserDao) SearchByEmail(email string) (users []model.User, err error) {
+	err = dao.DB.Order("name asc").Find(&users).Error
 	return
 }
 
 // SearchByPseudo : return user with pseudo like"%pseudo%"
-func (dao UserDao) SearchByPseudo(pseudo string) (user []model.User, err error) {
-	err = dao.DB.Model(&user).Where("lower(pseudo) like concat('%',lower(?),'%')", pseudo).Select()
+func (dao UserDao) SearchByPseudo(pseudo string) (users []model.User, err error) {
+	err = dao.DB.Where("lower(pseudo) like concat('%',lower(?),'%')", pseudo).Find(users).Error
 	return
 }
 
 //GetByPseudo : retourne un seul utilisateur  àpartir de son email
-func (dao UserDao) GetByPseudo(email string) (user model.User, err error) {
-	_, err = dao.DB.QueryOne(&user, "select * from user where pseudo = ?", email)
+// FIXME : ça pue ?
+func (dao UserDao) GetByPseudo(pseudo string) (user model.User, err error) {
+	err = dao.DB.Order("name asc").Where("pseudo = ?", pseudo).First(&user).Error
 	return
 }
 
 //GetByEmail : retourne un seul utilisateur à partir de son email
 func (dao UserDao) GetByEmail(email string) (user model.User, err error) {
-	// FIXME : nil dereference, commenton utilise ce QueryOne, ou alors utiliser model pourun select "one" ?
-	log.Printf("Recherche d'un utilisateur depuis son email %v\n", email)
-	defer log.Printf("Utilisateur trouvé %v \n", user)
-	// _, err = dao.DB.QueryOne(&retour, "select * from user where email = ?", email)
-	us, _ := dao.SearchByEmail(email)
-	log.Printf("résultat de la recherche par emaiol %v", us)
-	// user = us[0]
-	user = model.User{
-		UserID: 42,
-		Pseudo: "moogli",
-	}
+	err = dao.DB.Where("email = ?", email).First(&user).Error
 	return
 }
 
 // Authenticate Check if pseudo and pwd match
-func (dao UserDao) Authenticate(pseudo string, pwd string) (retour bool, err error) {
-	dao.DB.Prepare("select count(1) from users where pseudo = ? and pwd = ?")
-	// exec + récup + return bool error !
-	retour = true
+// FIXME : voir pour juste le Count
+func (dao UserDao) Authenticate(pseudo string, pwd string) (retour model.User, err error) {
+	retour, err = userAuthRequest(dao, "pseudo = , and pwd = ?", pseudo, pwd)
 	return
 }
 
 // AuthenticateByEmail authentification d'un utilisateur avec son email
-func (dao UserDao) AuthenticateByEmail(pseudo string, pwd string) (retour bool, err error) {
-	dao.DB.Prepare("select count(1) from users where email = ? and pwd = ?")
-	// exec + récup + return bool error !
-	retour = true
+// FIXME idem
+func (dao UserDao) AuthenticateByEmail(email string, pwd string) (retour model.User, err error) {
+	retour, err = userAuthRequest(dao, "email = ? and pwd = ?", email, pwd)
 	return
 }
 
+func userAuthRequest(dao UserDao, predicat string, authField string, pwd string) (u model.User, err error) {
+	nb := 0
+	err = dao.DB.Where(predicat, authField, pwd).First(&u).Count(&nb).Error
+	if nb != 1 {
+		err = &DAOerror{Code: 001, Message: "Authentication fail : wrong ID or password"}
+	}
+	return
+
+}
+
 // Create : jesus ?
-func (dao UserDao) Create(user *model.User) error {
-	return dao.DB.Create(user)
+func (dao UserDao) Create(user *model.User) (e error) {
+	e = dao.DB.Set("gorm:save_associations", false).Create(user).Error
+	return
 }
 
 // Update : osef
-func (dao UserDao) Update(user *model.User) error {
-	return dao.DB.Update(user)
+func (dao UserDao) Update(user *model.User) (e error) {
+	e = dao.DB.Save(user).Error
+	return
 }
 
 //Delete : suppression d'un utilisateur
-func (dao UserDao) Delete(user *model.User) error {
-	return dao.DB.Delete(user)
+func (dao UserDao) Delete(user *model.User) (e error) {
+	e = dao.DB.Delete(user).Error
+	return
 }
