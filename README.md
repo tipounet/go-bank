@@ -165,8 +165,8 @@ Path | Méthode | Description
 
 * i18n
 * webapp dans le projet
-* page index avec description du projet (swagger ?)
-* authentification avec JWT entre font et back ?
+* page index avec description du projet (swagger ? pour le moment c'est le fichier MD affiché en HTML)
+* authentification avec JWT entre font et back ? (voir info de sri)
 * Gestion des services avec et sans authentifications
 * Tests unitaires
 * Meilleur gestion des erreurs go renvoyées (code, format etc.)
