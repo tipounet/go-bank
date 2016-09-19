@@ -10,8 +10,6 @@ import (
 
 // HomePage : page de garde
 func HomePage(w http.ResponseWriter, r *http.Request) {
-	initUserService()
-
 	w.Header().Set("Content-Type", "text/html; charset=UTF-8")
 	w.WriteHeader(http.StatusOK)
 	data, err := ioutil.ReadFile("README.md")

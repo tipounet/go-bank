@@ -5,7 +5,29 @@ API REST go pour gestion de compte basique
 go get -u github.com/tipounet/go-bank
 
 ## Configuration
-La connexion à la base de données ainsi que le port d'écoute HTTP sont configurables dans le fichier application.yaml (le context http n'est pas encore pris en compte).
+Le fichier de configuration application.yaml permet de fournir :
+* Les données de connexion à la base de données
+
+ Exemple
+``` yaml
+  pg :
+    host : localhost
+    port : 5432
+    user : bankAccountApp
+    password : bankAccountApp
+    schema : bankAccountApp
+```
+* Le port d'écoute HTTP (le context http n'est pas encore pris en compte).
+
+  Exemple
+``` yaml
+  http :
+    port : 8080
+    context : /
+```
+* La version de l'application (doit être placée par l'IC en attendant de trouver mieux)
+* Un flag (prettyjson) permettant de formater le json de sortie de façon plus lisible pour l'humain
+
 
 ## Description des service
 
@@ -143,8 +165,8 @@ Path | Méthode | Description
 
 * i18n
 * webapp dans le projet
-* page index avec description du projet (swagger ?)
-* authentification avec JWT entre font et back ?
+* page index avec description du projet (swagger ? pour le moment c'est le fichier MD affiché en HTML)
+* authentification avec JWT entre font et back ? (voir info de sri)
 * Gestion des services avec et sans authentifications
 * Tests unitaires
 * Meilleur gestion des erreurs go renvoyées (code, format etc.)

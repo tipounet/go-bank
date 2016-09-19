@@ -17,10 +17,10 @@ import (
 
 var accountService service.AccountService
 
-func initAccountService() {
+func init() {
 	if accountService.Dao == nil {
 		dao := dao.AccountDao{
-			DB: dao.DbConnect(),
+			DB: dao.GetDbConnexion(),
 		}
 		accountService = service.AccountService{
 			Dao: &dao,
@@ -30,16 +30,12 @@ func initAccountService() {
 
 // GetAllAccount : service qui retourne la liste complète des comptes
 func GetAllAccount(w http.ResponseWriter, r *http.Request) {
-	initAccountService()
 	accounts, _ := accountService.Read()
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(accounts)
+	writeHTTPJSONResponse(w, accounts)
 }
 
 //SearchAccountByID :tous est dans le nom
 func SearchAccountByID(w http.ResponseWriter, r *http.Request) {
-	initAccountService()
 	vars := mux.Vars(r)
 	stringID := vars["id"]
 	// FIXME : comment je passe d'une string à un int64 ?
@@ -53,18 +49,13 @@ func SearchAccountByID(w http.ResponseWriter, r *http.Request) {
 			log.Println("Erreur sur le select SQL ", err)
 			errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: err.Error()}, http.StatusBadRequest, w)
 		} else {
-			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(accounts)
+			writeHTTPJSONResponse(w, accounts)
 		}
 	}
 }
 
 // CreateAccount : Réponse sur requete POST a /account avec l'utilisateur en JSON dans le body
 func CreateAccount(w http.ResponseWriter, r *http.Request) {
-	initAccountService()
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-
 	var account model.Account
 	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
 	if err != nil {
@@ -79,8 +70,7 @@ func CreateAccount(w http.ResponseWriter, r *http.Request) {
 				if err := accountService.Create(&account); err != nil {
 					errorResponse(err, http.StatusInternalServerError, w)
 				} else {
-					w.WriteHeader(http.StatusOK)
-					json.NewEncoder(w).Encode(account)
+					writeHTTPJSONResponse(w, account)
 				}
 			}
 		}
@@ -89,7 +79,6 @@ func CreateAccount(w http.ResponseWriter, r *http.Request) {
 
 // UpdateAccount : Mise a jour d'un utilisateur
 func UpdateAccount(w http.ResponseWriter, r *http.Request) {
-	initAccountService()
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
 	var account model.Account

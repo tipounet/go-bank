@@ -21,6 +21,7 @@ func (e *HTTPerror) Error() string {
 // TODO : voir pour ajouter la stack dans la réponse ?
 func errorResponse(e error, errorCode int, w http.ResponseWriter) {
 	log.Print(e)
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(errorCode)
 	json.NewEncoder(w).Encode(HTTPerror{
 		Code:    int64(errorCode),

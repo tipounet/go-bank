@@ -17,10 +17,10 @@ import (
 
 var bankService service.BankService
 
-func initBankService() {
+func init() {
 	if bankService.Dao == nil {
 		dao := dao.BankDao{
-			DB: dao.DbConnect(),
+			DB: dao.GetDbConnexion(),
 		}
 		bankService = service.BankService{
 			Dao: &dao,
@@ -30,16 +30,16 @@ func initBankService() {
 
 // GetAllBanK : service qui retourne la liste complète des banques
 func GetAllBanK(w http.ResponseWriter, r *http.Request) {
-	initBankService()
-	banks, _ := bankService.Get()
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(banks)
+	if banks, e := bankService.Get(); e != nil {
+		errorResponse(e, http.StatusBadRequest, w)
+	} else {
+		writeHTTPJSONResponse(w, banks)
+	}
+
 }
 
 //SearchBankByID :tous est dans le nom
 func SearchBankByID(w http.ResponseWriter, r *http.Request) {
-	initBankService()
 	vars := mux.Vars(r)
 	stringID := vars["id"]
 	// FIXME : comment je passe d'une string à un int64 ?
@@ -53,9 +53,7 @@ func SearchBankByID(w http.ResponseWriter, r *http.Request) {
 			log.Println("Erreur sur le select SQL ", err)
 			errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: err.Error()}, http.StatusBadRequest, w)
 		} else {
-			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(banks)
+			writeHTTPJSONResponse(w, banks)
 		}
 	}
 }
@@ -63,31 +61,22 @@ func SearchBankByID(w http.ResponseWriter, r *http.Request) {
 //SearchBankByName :tous est dans le nom
 func SearchBankByName(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	initBankService()
 	vars := mux.Vars(r)
 	name := vars["name"]
 	if name == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(HTTPerror{
-			Code:    http.StatusBadRequest,
-			Message: "Paramètre name obligatoire non vide",
-		})
+		errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: "Paramètre name obligatoire non vide"}, http.StatusBadRequest, w)
 	} else {
 		banks, e := bankService.SearchPartialName(name)
 		if e != nil {
-			errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: "Paramètre name obligatoire non vide"}, http.StatusBadRequest, w)
+			errorResponse(e, http.StatusBadRequest, w)
+		} else {
+			writeHTTPJSONResponse(w, banks)
 		}
-
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(banks)
 	}
 }
 
 // CreateBank : Réponse sur requete POST a /bank avec la bank en JSON dans le body
 func CreateBank(w http.ResponseWriter, r *http.Request) {
-	initBankService()
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-
 	var bank model.Bank
 	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
 	if err != nil {
@@ -102,8 +91,7 @@ func CreateBank(w http.ResponseWriter, r *http.Request) {
 				if err := bankService.Create(&bank); err != nil {
 					errorResponse(err, http.StatusInternalServerError, w)
 				} else {
-					w.WriteHeader(http.StatusOK)
-					json.NewEncoder(w).Encode(bank)
+					writeHTTPJSONResponse(w, bank)
 				}
 			}
 		}
@@ -112,7 +100,6 @@ func CreateBank(w http.ResponseWriter, r *http.Request) {
 
 // UpdateBank : Mise a jour d'une banque
 func UpdateBank(w http.ResponseWriter, r *http.Request) {
-	initBankService()
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
 	var bank model.Bank
