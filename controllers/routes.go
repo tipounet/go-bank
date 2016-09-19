@@ -141,7 +141,7 @@ func getRoute() Routes {
 		}, Route{
 			"UpdateTransaction",
 			http.MethodPut,
-			"/transaction",
+			"/transaction/{id}",
 			UpdateTransaction,
 		}, Route{
 			"DeleteTransactionID",

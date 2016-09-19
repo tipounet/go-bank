@@ -80,9 +80,13 @@ func (dao TransactionDao) Create(t *model.Transaction) (err error) {
 	return
 }
 
-// Update : osef
-func (dao TransactionDao) Update(t *model.Transaction) (err error) {
+// Update : mise à jour d'une transaction
+// TODO : Voir pour prendre l'ID dans l'url vue que l'on fait un put (transaction/id)
+func (dao TransactionDao) Update(t *model.Transaction, idOriginal int64) (err error) {
+	// FIXME : le where double la condition car gorm prend quand même la pk l'objet du save :/
+	// même problème avec Update
 	err = dao.DB.Save(&t).Error
+	//TODO : comment faire un update avec l'orm sans devoir se la faire à la main et en spécifiant moi même le prédicat ?
 	return
 }
 

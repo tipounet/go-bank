@@ -93,21 +93,31 @@ func CreateTransaction(w http.ResponseWriter, r *http.Request) {
 
 // UpdateTransaction : Mise a jour d'une transaction
 func UpdateTransaction(w http.ResponseWriter, r *http.Request) {
-	var transaction model.Transaction
-	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
-	if err != nil {
-		errorResponse(err, http.StatusBadRequest, w)
+	vars := mux.Vars(r)
+	strID := vars["id"] // l'id est passé dans l'url on fait une mise à complete donc potentiellement l'id aussi
+	log.Printf("id dans l'url : %v", strID)
+	idOriginal, errConv := strconv.Atoi(strID)
+	if errConv != nil {
+		msg := "Erreur de conversion\n" + errConv.Error()
+		errorResponse(&HTTPerror{Code: http.StatusInternalServerError, Message: msg}, http.StatusBadRequest, w)
 	} else {
-		if err := r.Body.Close(); err != nil {
+		var transaction model.Transaction
+		body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
+		if err != nil {
 			errorResponse(err, http.StatusBadRequest, w)
 		} else {
-			if err := json.Unmarshal(body, &transaction); err != nil {
-				errorResponse(err, 422, w)
+			if err := r.Body.Close(); err != nil {
+				errorResponse(err, http.StatusBadRequest, w)
 			} else {
-				if err := transactionService.Update(&transaction); err != nil {
-					errorResponse(err, http.StatusInternalServerError, w)
+				if err := json.Unmarshal(body, &transaction); err != nil {
+					errorResponse(err, 422, w)
 				} else {
-					w.WriteHeader(http.StatusNoContent)
+					log.Printf("la transaction a mettre a jour : %v", transaction)
+					if err := transactionService.Update(&transaction, int64(idOriginal)); err != nil {
+						errorResponse(err, http.StatusInternalServerError, w)
+					} else {
+						w.WriteHeader(http.StatusNoContent)
+					}
 				}
 			}
 		}

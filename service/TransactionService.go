@@ -43,8 +43,8 @@ func (service TransactionService) Read() ([]model.Transaction, error) {
 }
 
 // Update : mise à jour d'une transaction
-func (service TransactionService) Update(transaction *model.Transaction) error {
-	return service.Dao.Update(transaction)
+func (service TransactionService) Update(transaction *model.Transaction, idOriginal int64) error {
+	return service.Dao.Update(transaction, idOriginal)
 }
 
 // Delete : suppression d'une transaction
