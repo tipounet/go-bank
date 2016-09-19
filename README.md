@@ -164,11 +164,11 @@ Path | Méthode | Description
 # TODO
 
 * i18n
-* webapp dans le projet ?
+* webapp dans le projet
 * page index avec description du projet (swagger ?)
-* authentification avec JWT entre front et back ?
-* Gestion des services avec et sans authentifications (version / auth sont sans authentification)
-* Tests unitaires (on fait comment ? on peu mock /stub ?)
+* authentification avec JWT entre font et back ?
+* Gestion des services avec et sans authentifications
+* Tests unitaires
 * Meilleur gestion des erreurs go renvoyées (code, format etc.)
 * Récupérer les erreurs de gorm pour les exploiter ensuite : ok ?
 * Ajouter l'utilisation des entêtes range / total sur les service get
