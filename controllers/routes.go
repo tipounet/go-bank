@@ -13,21 +13,11 @@ type Route struct {
 // Routes : un tableau de Route
 type Routes []Route
 
-// getRoute : retourne la liste des routes de l'application
+// getRouteWithAuth : retourne la liste des routes de l'application
 // TODO : implementer l'utilisation du verbe HTTP options pour chaque ressource histoire de founir l'info
-func getRoute() Routes {
+func getRouteWithAuth() Routes {
 	return Routes{
 		Route{
-			"Index",
-			http.MethodGet,
-			"/",
-			HomePage,
-		}, Route{
-			"Version",
-			http.MethodGet,
-			"/version",
-			getVersion,
-		}, Route{
 			"allBank",
 			http.MethodGet,
 			"/bank",
@@ -84,11 +74,6 @@ func getRoute() Routes {
 			http.MethodDelete,
 			"/user/{id}",
 			DeleteUserID,
-		}, Route{
-			"UserAuthenticate",
-			http.MethodPost,
-			"/user/authenticate",
-			UserAuthenticate,
 		},
 		// Account
 		Route{
@@ -175,6 +160,33 @@ func getRoute() Routes {
 			http.MethodDelete,
 			"/transactionType/{id}",
 			DeleteTransactionTypeID,
+		},
+	}
+}
+
+// getRouteWithoutAuth Liste des routes qui ne demandes pas d'authentification, ou qui la fournisse ;)
+func getRouteWithoutAuth() Routes {
+	return Routes{
+		Route{
+			"Index",
+			http.MethodGet,
+			"/",
+			HomePage,
+		}, Route{
+			"Version",
+			http.MethodGet,
+			"/version",
+			getVersion,
+		}, Route{
+			"UserAuthenticate",
+			http.MethodPost,
+			"/user/authenticate",
+			UserAuthenticate,
+		}, Route{
+			"Logout",
+			http.MethodDelete,
+			"/user/logout",
+			UserLogout,
 		},
 	}
 }

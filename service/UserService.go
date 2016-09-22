@@ -1,6 +1,9 @@
 package service
 
 import (
+	"log"
+
+	"github.com/tipounet/go-bank/authentication"
 	"github.com/tipounet/go-bank/dao"
 	"github.com/tipounet/go-bank/model"
 )
@@ -72,6 +75,13 @@ func (service UserService) Read() ([]model.User, error) {
 
 // Update : mise à jour d'un utilisateurs
 func (service UserService) Update(user *model.User) error {
+	// salt := "du sel"
+	// dk, _ := scrypt.Key([]byte(user.Pwd), []byte(salt), 16384, 8, 1, 32)
+	// user.Pwd = string(dk)
+	password := authentication.CreatePassword(user.Pwd)
+	user.Pwd = password.Hash
+	user.Salt = password.Salt
+	log.Printf("nouvel utilisateur : %v", user)
 	return service.Dao.Update(user)
 }
 

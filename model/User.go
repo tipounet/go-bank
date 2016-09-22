@@ -8,5 +8,5 @@ type User struct {
 	Pseudo string `json:"pseudo"`
 	Email  string `json:"email"`
 	Pwd    string `json:"pwd"`
-	Pwdbit []byte `gorm:"-" json:"pwdbit"`
+	Salt   string `json:"-"`
 }

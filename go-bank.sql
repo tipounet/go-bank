@@ -83,7 +83,7 @@ CREATE TABLE users (
     pseudo character varying(50) NOT NULL,
     email character varying(50) NOT NULL,
     pwd character varying(256) NOT NULL,
-    pwdbit bit(32)[]
+    salt character varying(64) NOT NULL,
 );
 
 CREATE SEQUENCE users_userid_seq

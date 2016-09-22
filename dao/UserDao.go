@@ -98,7 +98,7 @@ func (dao UserDao) Create(user *model.User) (e error) {
 
 // Update : osef
 func (dao UserDao) Update(user *model.User) (e error) {
-	e = dao.DB.Save(user).Error
+	e = dao.DB.Model(&model.User{}).Update(user).Error
 	return
 }
 

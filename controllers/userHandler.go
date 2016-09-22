@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gorilla/mux"
 
@@ -15,7 +16,10 @@ import (
 	"github.com/tipounet/go-bank/service"
 )
 
-var userService service.UserService
+var (
+	userService service.UserService
+	jwt         service.JWTService
+)
 
 func init() {
 	if userService.Dao == nil {
@@ -30,6 +34,7 @@ func init() {
 
 // GetAllUser : service qui retourne la liste complète des utilisateurs
 func GetAllUser(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	if users, e := userService.Read(); e != nil {
 		errorResponse(e, http.StatusBadRequest, w)
 	} else {
@@ -175,6 +180,9 @@ func UserAuthenticate(w http.ResponseWriter, r *http.Request) {
 						errorResponse(aerr, code, w)
 					} else {
 						log.Printf("L'utilisateur trouvé à la fin: %v\n", retour)
+						// w.Header().Set("FuckingHeader", "fucking content !!!"+jwt.GenerateToken(retour.Email))
+						// w.Header().Set("Set-Cookie", "jwt="+jwt.GenerateToken(retour.Email)+"; Expires=Wed, 09 Jun 2021 10:18:14 GMT")
+						setJWTCookie(retour.Email, w)
 						writeHTTPJSONResponse(w, retour)
 					}
 				}
@@ -183,11 +191,34 @@ func UserAuthenticate(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// UserLogout : traitement de la requête http DELTE sur /user/logout. Il s'agit de la déconnexion de l'utilisateur
+func UserLogout(w http.ResponseWriter, r *http.Request) {
+	// en cas de sauvegarde de l'utilisateur connecté en base il faut le supprimer
+	// suppression du cookie jwt
+	http.SetCookie(w, &http.Cookie{
+		Name:  "jwt",
+		Value: "token",
+		Path:  "/",
+		// FIXME : suppression de temps à un time ?
+		Expires: time.Now().Add(20 * time.Minute),
+	})
+}
+func setJWTCookie(email string, w http.ResponseWriter) {
+	token := jwt.GenerateToken(email)
+	http.SetCookie(w, &http.Cookie{
+		Name:    "jwt",
+		Value:   token,
+		Path:    "/",
+		Expires: time.Now().Add(20 * time.Minute),
+	})
+	log.Printf("Le token JWT généré %s", token)
+}
+
 // cette fonction ne fonctionne pas, comment tester correctement qu'une chaine de caractère est vide ????
 func isEmptyString(s string) (retour bool) {
 	retour = true
 	// TODO : voir le fonctionnement du trim en go !
-	if len(s) != 0 {
+	if s != "" {
 		retour = false
 	}
 	return
