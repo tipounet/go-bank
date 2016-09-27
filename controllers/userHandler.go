@@ -179,10 +179,7 @@ func UserAuthenticate(w http.ResponseWriter, r *http.Request) {
 						}
 						errorResponse(aerr, code, w)
 					} else {
-						log.Printf("L'utilisateur trouvé à la fin: %v\n", retour)
-						// w.Header().Set("FuckingHeader", "fucking content !!!"+jwt.GenerateToken(retour.Email))
-						// w.Header().Set("Set-Cookie", "jwt="+jwt.GenerateToken(retour.Email)+"; Expires=Wed, 09 Jun 2021 10:18:14 GMT")
-						setJWTCookie(retour.Email, w)
+						addJWTtokenToResponse(retour.Email, w)
 						writeHTTPJSONResponse(w, retour)
 					}
 				}
@@ -202,8 +199,9 @@ func UserLogout(w http.ResponseWriter, r *http.Request) {
 		// FIXME : suppression de temps à un time ?
 		Expires: time.Now().Add(20 * time.Minute),
 	})
+	w.Header().Set("jwt", "")
 }
-func setJWTCookie(email string, w http.ResponseWriter) {
+func addJWTtokenToResponse(email string, w http.ResponseWriter) {
 	token := jwt.GenerateToken(email)
 	http.SetCookie(w, &http.Cookie{
 		Name:    "jwt",
@@ -211,7 +209,7 @@ func setJWTCookie(email string, w http.ResponseWriter) {
 		Path:    "/",
 		Expires: time.Now().Add(20 * time.Minute),
 	})
-	log.Printf("Le token JWT généré %s", token)
+	w.Header().Set("jwt", token)
 }
 
 // cette fonction ne fonctionne pas, comment tester correctement qu'une chaine de caractère est vide ????

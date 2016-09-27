@@ -12,7 +12,7 @@ type HTTPerror struct {
 	Message string
 }
 
-// Implemente l'interface error et du coup on peur retourner une HTTPerror comme error
+// Implemente l'interface error et du coup on peut retourner une HTTPerror comme error
 func (e *HTTPerror) Error() string {
 	return e.Message
 }

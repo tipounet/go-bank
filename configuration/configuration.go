@@ -28,6 +28,7 @@ type Configuration struct {
 	HTTP        HTTPConfiguration
 	Version     string
 	Prettyprint bool
+	JWT         string
 }
 
 var configuration Configuration

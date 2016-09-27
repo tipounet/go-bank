@@ -1,5 +1,6 @@
 package authentication
 
+// From : https://trihackeat.wordpress.com/2014/10/11/758/
 // This will handle all aspects of authenticating users in our system
 // For password managing/salting I used:
 // http://austingwalters.com/building-a-web-server-in-go-salting-passwords/

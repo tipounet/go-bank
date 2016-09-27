@@ -1,30 +1,45 @@
 package controllers
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 )
 
-// Middleware (just a http.Handler)
+// jwtHandler : http handler permettant de vérifier si un token jwt existe et s'il est valide.
+// TODO mettre sa en session pour le cas ou ?
 func jwtHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// recup du token, si existe
-		c, e := r.Cookie("jwt")
-		if e != nil || c.Value == "" {
-			// a priori le cookie n'existe pas donc forbiden
-			log.Printf("Pas de cookie jwt (%v)", e)
-			w.WriteHeader(http.StatusUnauthorized)
-		} else {
-			// FIXME : valider le token !!!
-			// do stuff
-			log.Printf("On a un token jwt %s", c.Value)
-			h.ServeHTTP(w, r)
+		token := r.Header.Get("jwt")
+		log.Printf("le header jwt : %v\n", token)
+		var err error
+		if token == "" {
+			log.Printf("le token n'est pas dans le header on cherche dans les cookies")
+			c, e := r.Cookie("jwt")
+			if e == nil && c.Value != "" {
+				log.Printf("On a un token jwt %s", c.Value)
+				token = c.Value
+			} else {
+				err = e
+			}
 		}
-		// do stuff after ?
+		if token != "" {
+			if usermail, ok := jwt.ParseToken(token); ok {
+				log.Printf("Email de l'utilisateur :%s", usermail)
+				// renouveller le jeton pour pas être déco
+				addJWTtokenToResponse(usermail, w)
+				// get user by mail and put user in session ?
+				h.ServeHTTP(w, r)
+				return
+			}
+			err = fmt.Errorf("Erreur d'authentification jwt, voir dans le log en amont (expiré, token ko etc.)")
+		} else {
+			// pas de jeton
+			err = fmt.Errorf("Erreur d'authentification pas de token jwt")
+		}
+		// a priori le cookie n'existe pas donc forbiden
+		errorResponse(err, http.StatusUnauthorized, w)
 	})
 }
 
-// TODO :la même chose, pour le header ?
-func getJwtTokenInCookie(r *http.Request) {
-
-}
+//

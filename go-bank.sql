@@ -107,6 +107,8 @@ ALTER TABLE ONLY transaction_type
 
 ALTER TABLE ONLY users
     ADD CONSTRAINT pk_users PRIMARY KEY (userid);
+ALTER TABLE ONLY users
+    ADD CONSTRAINT UK_USERMAIL UNIQUE(email)
 ALTER TABLE ONLY transaction
     ADD CONSTRAINT pk_transaction PRIMARY KEY (transactionid);
 ALTER TABLE ONLY bankaccount

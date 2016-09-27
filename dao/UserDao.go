@@ -56,7 +56,7 @@ func (dao UserDao) SearchByPseudo(pseudo string) (users []model.User, err error)
 //GetByPseudo : retourne un seul utilisateur  àpartir de son email
 // FIXME : ça pue ?
 func (dao UserDao) GetByPseudo(pseudo string) (user model.User, err error) {
-	err = dao.DB.Order("name asc").Where("pseudo = ?", pseudo).First(&user).Error
+	err = dao.DB.Where("pseudo = ?", pseudo).First(&user).Error
 	return
 }
 
@@ -64,30 +64,6 @@ func (dao UserDao) GetByPseudo(pseudo string) (user model.User, err error) {
 func (dao UserDao) GetByEmail(email string) (user model.User, err error) {
 	err = dao.DB.Where("email = ?", email).First(&user).Error
 	return
-}
-
-// Authenticate Check if pseudo and pwd match
-// FIXME : voir pour juste le Count
-func (dao UserDao) Authenticate(pseudo string, pwd string) (retour model.User, err error) {
-	retour, err = userAuthRequest(dao, "pseudo = , and pwd = ?", pseudo, pwd)
-	return
-}
-
-// AuthenticateByEmail authentification d'un utilisateur avec son email
-// FIXME idem
-func (dao UserDao) AuthenticateByEmail(email string, pwd string) (retour model.User, err error) {
-	retour, err = userAuthRequest(dao, "email = ? and pwd = ?", email, pwd)
-	return
-}
-
-func userAuthRequest(dao UserDao, predicat string, authField string, pwd string) (u model.User, err error) {
-	nb := 0
-	err = dao.DB.Where(predicat, authField, pwd).First(&u).Count(&nb).Error
-	if nb != 1 {
-		err = &DAOerror{Code: 001, Message: "Authentication fail : wrong ID or password"}
-	}
-	return
-
 }
 
 // Create : jesus ?

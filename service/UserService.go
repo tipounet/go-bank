@@ -1,7 +1,7 @@
 package service
 
 import (
-	"log"
+	"errors"
 
 	"github.com/tipounet/go-bank/authentication"
 	"github.com/tipounet/go-bank/dao"
@@ -55,12 +55,39 @@ func (service UserService) SearchByPseudo(pseudo string) ([]model.User, error) {
 
 // UserAuthenticate : authentification d'un utilisateur a partir de son pseudo et son mot de passe
 func (service UserService) UserAuthenticate(pseudo string, pwd string) (retour model.User, err error) {
-	return service.Dao.Authenticate(pseudo, pwd)
+	retour, err = service.Dao.GetByPseudo(pseudo)
+	if err == nil {
+		return userAuthenticate(pwd, retour)
+	}
+	retour = model.User{}
+	return
 }
 
 // UserAuthenticateByEMail : authentification d'un utilisateur a partir de son email et son mot de passe
 func (service UserService) UserAuthenticateByEMail(mail string, pwd string) (retour model.User, err error) {
-	return service.Dao.AuthenticateByEmail(mail, pwd)
+	retour, err = service.Dao.GetByEmail(mail)
+	if err == nil {
+		return userAuthenticate(pwd, retour)
+	}
+	return
+}
+
+// Vérifie les informations utilisateur
+func userAuthenticate(pwd string, user model.User) (retour model.User, err error) {
+	if checkUserPassword(pwd, user) {
+		return user, nil
+	}
+	err = errors.New("ID and password does not match")
+	retour = model.User{}
+	return
+}
+
+// checkUserPassword : vérifie que le mot de passe fournit match celui en base
+func checkUserPassword(pwd string, user model.User) bool {
+	return authentication.PasswordMatch(pwd, &authentication.Password{
+		Hash: user.Pwd,
+		Salt: user.Salted,
+	})
 }
 
 // Create : création d'un nouvel utilisateur
@@ -80,8 +107,9 @@ func (service UserService) Update(user *model.User) error {
 	// user.Pwd = string(dk)
 	password := authentication.CreatePassword(user.Pwd)
 	user.Pwd = password.Hash
-	user.Salt = password.Salt
-	log.Printf("nouvel utilisateur : %v", user)
+
+	user.Salted = password.Salt
+	// Problème le salt n'est pas utf-8 pas d'insertion => voir pour un blob ? (btea ?)
 	return service.Dao.Update(user)
 }
 
