@@ -204,12 +204,12 @@ func UserLogout(w http.ResponseWriter, r *http.Request) {
 func addJWTtokenToResponse(email string, w http.ResponseWriter) {
 	token := jwt.GenerateToken(email)
 	http.SetCookie(w, &http.Cookie{
-		Name:    "jwt",
-		Value:   token,
-		Path:    "/",
-		Expires: time.Now().Add(20 * time.Minute),
-        Secure   false,// permet d'avoir le cookie qu'en version securisé en général si url = https
-    	HttpOnly true, // permet de restreindre l'accès au cookie. si true javascript n'y a pas accès (si implementé coté serveur)
+		Name:     "jwt",
+		Value:    token,
+		Path:     "/",
+		Expires:  time.Now().Add(20 * time.Minute),
+		Secure:   false, // permet d'avoir le cookie qu'en version securisÃ© en gÃ©nÃ©ral si url = https
+		HttpOnly: true,  // permet de restreindre l'accÃ¨s au cookie. si true javascript n'y a pas accÃ¨s (si implementÃ© cotÃ© serveur)
 	})
 	w.Header().Set("jwt", token)
 }
