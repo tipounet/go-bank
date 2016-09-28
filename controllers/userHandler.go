@@ -208,6 +208,8 @@ func addJWTtokenToResponse(email string, w http.ResponseWriter) {
 		Value:   token,
 		Path:    "/",
 		Expires: time.Now().Add(20 * time.Minute),
+        Secure   false,// permet d'avoir le cookie qu'en version securisé en général si url = https
+    	HttpOnly true, // permet de restreindre l'accès au cookie. si true javascript n'y a pas accès (si implementé coté serveur)
 	})
 	w.Header().Set("jwt", token)
 }
