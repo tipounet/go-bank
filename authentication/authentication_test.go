@@ -1,20 +1,113 @@
 package authentication
 
 import (
-	"fmt"
+	"log"
+	"strings"
 	"testing"
+
+	. "github.com/smartystreets/goconvey/convey"
+	"golang.org/x/crypto/bcrypt"
 )
 
-func TestSpec(t *testing.T) {
-
+func TestGenerateSalt(t *testing.T) {
 	salt := generateSalt()
 	if len(salt) != SaltLength {
-		fmt.Printf("le sel ne fait pas la bonne taille actual %v, expected %v\n\n", len(salt), SaltLength)
+		t.Fatalf("le sel ne fait pas la bonne taille actual %v, expected %v\n\n", len(salt), SaltLength)
 	}
+}
+
+func TestCreatePassword(t *testing.T) {
 	p := "boomchuckalucka"
 	password := CreatePassword(p)
-	fmt.Printf("CreatePassword : %v\n\n", password)
+	if password.Salt == "" {
+		t.Errorf("Le grain de sel ne devrait pas être vide (%v)", password)
+	}
 	passStruct := new(Password)
-	fmt.Printf("PAss struct %v\n\n", passStruct)
+	if passStruct.Salt != "" {
+		t.Errorf("Le grain de sel  devrait être vide")
+	}
+}
 
+func TestPasswordMatch(t *testing.T) {
+	p := "boomchuckalucka"
+	password := CreatePassword(p)
+	if ok, _ := PasswordMatch(p, password); !ok {
+		t.Errorf("Le mot de passe doit match %v\n", p)
+	}
+
+	failedPwd := []string{"boomchuckalucka4", "bboomchuckalucka", "boomchuckalucka42", "_boomchuckalucka4_", "-boomchuckalucka4", "azerty"}
+	for _, pwd := range failedPwd {
+		if ok, _ := PasswordMatch(pwd, password); ok {
+			t.Errorf("Le mot de passe ne doit pas correspondre %v != %v\n\n", p, pwd)
+		}
+	}
+
+	if ok, _ := PasswordMatch(p, &Password{
+		Hash: password.Hash,
+		Salt: password.Salt,
+	}); !ok {
+		t.Errorf("Comparaison du mot de passe avec lui même ko (%v)", p)
+	}
+}
+
+//
+func TestSpec(t *testing.T) {
+
+	Convey("Authentication Testing", t, func() {
+		Convey("generateSalt()", func() {
+			salt := generateSalt()
+			So(salt, ShouldNotBeBlank)
+			So(len(salt), ShouldEqual, SaltLength)
+		})
+
+		Convey("combine()", func() {
+			salt := generateSalt()
+			password := "boomchuckalucka"
+			expectedLength := len(salt) + len(password)
+			combo := combine(salt, password)
+
+			So(combo, ShouldNotBeBlank)
+			So(len(combo), ShouldEqual, expectedLength)
+			So(strings.HasPrefix(combo, salt), ShouldBeTrue)
+		})
+
+		Convey("hashPassword()", func() {
+			combo := combine(generateSalt(), "hershmahgersh")
+			hash := hashPassword(combo)
+			So(hash, ShouldNotBeBlank)
+
+			cost, err := bcrypt.Cost([]byte(hash))
+			if err != nil {
+				log.Print(err)
+			}
+			So(cost, ShouldEqual, EncryptCost)
+		})
+
+		Convey("CreatePassword()", func() {
+			passString := "mmmPassword1"
+			password := CreatePassword(passString)
+			passStruct := new(Password)
+
+			So(password, ShouldHaveSameTypeAs, passStruct)
+			So(password.Hash, ShouldNotBeBlank)
+			So(password.Salt, ShouldNotBeBlank)
+			So(len(password.Salt), ShouldEqual, SaltLength)
+		})
+
+		Convey("comparePassword", func() {
+			password := "megaman49"
+			passwordMeta := CreatePassword(password)
+
+			ok, _ := PasswordMatch(password, passwordMeta)
+			So(ok, ShouldBeTrue)
+			ok, _ = PasswordMatch("lolfail", passwordMeta)
+			So(ok, ShouldBeFalse)
+			ok, _ = PasswordMatch("Megaman49", passwordMeta)
+			So(ok, ShouldBeFalse)
+			ok, _ = PasswordMatch("megaman40", passwordMeta)
+			So(ok, ShouldBeFalse)
+			ok, _ = PasswordMatch("megaman48", passwordMeta)
+			So(ok, ShouldBeFalse)
+		})
+	})
 }

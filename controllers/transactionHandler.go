@@ -43,14 +43,14 @@ func SearchTransactionByID(w http.ResponseWriter, r *http.Request) {
 	stringID := vars["id"]
 	ID, e := strconv.Atoi(stringID)
 	if e != nil {
-		errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: "Paramètre name obligatoire non vide"}, http.StatusBadRequest, w)
+		errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: "Paramètre id obligatoire non vide"}, http.StatusBadRequest, w)
 	} else {
 		transaction, err := transactionService.SearchByID(int64(ID))
 		if err != nil {
 			// FIXME meilleur Message
 			log.Printf("Erreur SQL %v \n", err)
 			// Le errorResponse est dupliqué parce si j'essai httpCode := http.StatusNotFound
-			// Le compilateur couine soit parce qu'il veux pas passer d'un int à un int64 soit l'linverse suivant le type que je donne a httpCode ...
+			// Le compilateur couine soit parce qu'il veux pas passer d'un int à un int64 soit l'inverse suivant le type que je donne a httpCode ...
 			if err.Error() == "record not found" {
 				errorResponse(&HTTPerror{Code: http.StatusNotFound, Message: "Unknown transaction for ID " + stringID}, http.StatusNotFound, w)
 			} else {
@@ -61,6 +61,35 @@ func SearchTransactionByID(w http.ResponseWriter, r *http.Request) {
 				errorResponse(&HTTPerror{Code: http.StatusNotFound, Message: "Unknown transaction for ID " + stringID}, http.StatusNotFound, w)
 			} else {
 				writeHTTPJSONResponse(w, transaction)
+			}
+		}
+	}
+}
+
+//SearchTransactionByAccountID : Retourne a liste des transactions d'un compte spécifique.
+func SearchTransactionByAccountID(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	stringID := vars["id"]
+	ID, e := strconv.Atoi(stringID)
+	if e != nil {
+		errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: "Paramètre id obligatoire non vide"}, http.StatusBadRequest, w)
+	} else {
+		transactions, err := transactionService.SearchByAccount(int64(ID))
+		if err != nil {
+			// FIXME meilleur Message
+			log.Printf("Erreur SQL %v \n", err)
+			// Le errorResponse est dupliqué parce si j'essai httpCode := http.StatusNotFound
+			// Le compilateur couine soit parce qu'il veux pas passer d'un int à un int64 soit l'inverse suivant le type que je donne a httpCode ...
+			if err.Error() == "record not found" {
+				errorResponse(&HTTPerror{Code: http.StatusNotFound, Message: "Unknown transaction for ID " + stringID}, http.StatusNotFound, w)
+			} else {
+				errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: err.Error()}, http.StatusBadRequest, w)
+			}
+		} else {
+			if len(transactions) == 0 {
+				errorResponse(&HTTPerror{Code: http.StatusNotFound, Message: "No transaction for account ID " + stringID}, http.StatusNotFound, w)
+			} else {
+				writeHTTPJSONResponse(w, transactions)
 			}
 		}
 	}

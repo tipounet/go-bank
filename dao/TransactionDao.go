@@ -31,7 +31,10 @@ func (dao TransactionDao) SearchByAccount(accountID int64) (t []model.Transactio
 		Preload("Account.Bank").
 		Preload("TransactionType").
 		Preload("Account").
-		Preload("TransactionType").Order("posteddate desc").Find(&t).Error
+		Preload("TransactionType").
+		Where("bankaccountid = ?", accountID).
+		Order("posteddate desc").
+		Find(&t).Error
 	return
 }
 
@@ -42,7 +45,7 @@ func (dao TransactionDao) SearchByDate(date time.Time) (t []model.Transaction, e
 		Preload("Account.Bank").
 		Preload("TransactionType").
 		Preload("Account").
-		// FIXME : format date to force unckeck hours
+		// FIXME : format date to force unckeck hours to_char ?
 		Where("posteddate = ? or userdate = ?", date, date).
 		Order("posteddate desc").
 		Find(&t).Error

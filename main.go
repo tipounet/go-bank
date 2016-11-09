@@ -14,6 +14,7 @@ import (
 	"github.com/tipounet/go-bank/dao"
 )
 
+// TODO : Il faut prévoir de vérifier qu'il y ai un utilisateur en base sinon en ajouter un de base pour pouvoir ajouter les autres (utilisateur par défaut admin/4dm1n)
 func main() {
 	// init de la base de données pour être certain de la fermeture. Reste a voir pour que ce soit automatique à la fin de l'appli ? (equivalent de l'init mais en destroy ?)
 	db := dao.GetDbConnexion()

@@ -154,19 +154,12 @@ func UserAuthenticate(w http.ResponseWriter, r *http.Request) {
 				} else {
 					var aerr error
 					var retour model.User
-					authFail := false
 					if !isEmptyString(user.Email) {
 						log.Printf("Recherche par email : %v\n", user.Email)
 						retour, aerr = userService.UserAuthenticateByEMail(user.Email, user.Pwd)
-						if aerr != nil {
-							authFail = true
-						}
 					} else if !isEmptyString(user.Pseudo) {
 						log.Printf("Recherche par pseudo : %v %v\n", user.Email, user.Pwd)
 						retour, aerr = userService.UserAuthenticate(user.Pseudo, user.Pwd)
-						if aerr != nil {
-							authFail = true
-						}
 					} else {
 						log.Printf("Fail y a ni mail ni pseudo %v\n", user)
 						aerr = &HTTPerror{Code: http.StatusBadRequest, Message: "Information de connexion (utilisateur ou / ou mot de passe) manquante(s)"}
@@ -174,13 +167,18 @@ func UserAuthenticate(w http.ResponseWriter, r *http.Request) {
 					log.Printf("le retour de l'authentification %v | erreur : %v\n", retour, aerr)
 					if aerr != nil {
 						code := http.StatusBadRequest
-						if authFail {
-							code = http.StatusNotFound
-						}
 						errorResponse(aerr, code, w)
 					} else {
-						addJWTtokenToResponse(retour.Email, w)
-						writeHTTPJSONResponse(w, retour)
+						if retour.UserID > 0 {
+							// suppression du mot de passe de l'objet que l'on renvoit au client.
+							retour.Pwd = ""
+							addJWTtokenToResponse(retour, w)
+							writeHTTPJSONResponse(w, retour)
+						} else {
+							// FIXME : code http for bad credential, StatusUnauthorized ?
+							aerr = &HTTPerror{Code: http.StatusBadRequest, Message: "Erreur d'authentification, utilisateur inconnu ou mot de passe erroné"}
+							errorResponse(aerr, http.StatusBadRequest, w)
+						}
 					}
 				}
 			}
@@ -193,25 +191,12 @@ func UserLogout(w http.ResponseWriter, r *http.Request) {
 	// en cas de sauvegarde de l'utilisateur connecté en base il faut le supprimer
 	// suppression du cookie jwt
 	http.SetCookie(w, &http.Cookie{
-		Name:  "jwt",
-		Value: "token",
-		Path:  "/",
-		// FIXME : suppression de temps à un time ?
-		Expires: time.Now().Add(20 * time.Minute),
+		Name:    "jwt",
+		Value:   "",
+		Path:    "/",
+		Expires: time.Now().Add(-20 * time.Minute),
 	})
-	w.Header().Set("jwt", "")
-}
-func addJWTtokenToResponse(email string, w http.ResponseWriter) {
-	token := jwt.GenerateToken(email)
-	http.SetCookie(w, &http.Cookie{
-		Name:     "jwt",
-		Value:    token,
-		Path:     "/",
-		Expires:  time.Now().Add(20 * time.Minute),
-		Secure:   false, // permet d'avoir le cookie qu'en version securisé en général si url = https
-		HttpOnly: true,  // permet de restreindre l'accès au cookie. si true javascript n'y a pas accès (si implementé coté serveur)
-	})
-	w.Header().Set("jwt", token)
+	w.Header().Set("Authorization", "")
 }
 
 // cette fonction ne fonctionne pas, comment tester correctement qu'une chaine de caractère est vide ????

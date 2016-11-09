@@ -10,7 +10,7 @@ import (
 // TODO mettre sa en session pour le cas ou ?
 func jwtHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		token := r.Header.Get("jwt")
+		token := r.Header.Get("Authorization")
 		log.Printf("le header jwt : %v\n", token)
 		var err error
 		if token == "" {
@@ -24,10 +24,10 @@ func jwtHandler(h http.Handler) http.Handler {
 			}
 		}
 		if token != "" {
-			if usermail, ok := jwt.ParseToken(token); ok {
-				log.Printf("Email de l'utilisateur :%s", usermail)
+			if user, ok := jwt.ParseToken(token); ok {
+				log.Printf("Email de l'utilisateur :%v", user)
 				// renouveller le jeton pour pas être déco
-				addJWTtokenToResponse(usermail, w)
+				addJWTtokenToResponse(user, w)
 				// get user by mail and put user in session ?
 				h.ServeHTTP(w, r)
 				return
@@ -37,9 +37,7 @@ func jwtHandler(h http.Handler) http.Handler {
 			// pas de jeton
 			err = fmt.Errorf("Erreur d'authentification pas de token jwt")
 		}
-		// a priori le cookie n'existe pas donc forbiden
+		// a priori le cookie et le header n'existent pas donc forbiden
 		errorResponse(err, http.StatusUnauthorized, w)
 	})
 }
-
-//

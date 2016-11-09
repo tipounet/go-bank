@@ -102,7 +102,7 @@ Path | Méthode | Description
 /user | PUT | Mise à jour d'un utilisateur avec le JSON dans le corps de la requête
 /user/{id} | DELETE | Suppression d'un utilisateur à partir de son ID
 
-### Transaction : une transaction sur un compte c'est crédit ou un débit, montant, un id etc.
+### Transaction : une transaction sur un compte c'est un crédit ou un débit, montant, un id etc.
 ``` json
 {
    "id":1,

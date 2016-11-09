@@ -15,6 +15,7 @@ import (
 // exemple : https://gist.githubusercontent.com/danesparza/eb3a63ab55a7cd33923e/raw/f3e0be8a7cdb8779a3b109618b9f9c73523978fd/main.go
 func NewRouter() *mux.Router {
 	router := mux.NewRouter().StrictSlash(true)
+
 	addRoute(router, getRouteWithAuth(), []func(http.Handler) http.Handler{jwtHandler})
 	addRoute(router, getRouteWithoutAuth(), []func(http.Handler) http.Handler{})
 
@@ -38,7 +39,14 @@ func addRoute(router *mux.Router, routes []Route, handlers []func(http.Handler) 
 			Path(route.Pattern).
 			Name(route.Name).
 			Handler(use(handler, handlers))
+
+		router.
+			Methods(http.MethodOptions).
+			Path(route.Pattern).
+			Name(route.Name).
+			Handler(optionsHandler(handler))
 	}
+
 }
 func getStaticPath() string {
 	p, err := build.Import("github.com/tipounet/go-bank", "", build.FindOnly)

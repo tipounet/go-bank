@@ -14,7 +14,7 @@ type Route struct {
 type Routes []Route
 
 // getRouteWithAuth : retourne la liste des routes de l'application
-// TODO : implementer l'utilisation du verbe HTTP options pour chaque ressource histoire de founir l'info
+// TODO : implementer l'utilisation du verbe HTTP options pour chaque ressource histoire de founir l'info, pour le moment c'est une requête générique
 func getRouteWithAuth() Routes {
 	return Routes{
 		Route{
@@ -87,6 +87,12 @@ func getRouteWithAuth() Routes {
 			"/account/{id}",
 			SearchAccountByID,
 		}, Route{
+			"SearchAccountByUserID",
+			http.MethodGet,
+			"/account/user/{id}",
+			// TODO
+			SearchAccountByUserID,
+		}, Route{
 			"CreateAccount",
 			http.MethodPost,
 			"/account",
@@ -118,6 +124,11 @@ func getRouteWithAuth() Routes {
 			http.MethodGet,
 			"/transaction/{id}",
 			SearchTransactionByID,
+		}, Route{
+			"getTransactionByAccount",
+			http.MethodGet,
+			"/transaction/account/{id}",
+			SearchTransactionByAccountID,
 		}, Route{
 			"CreateTransaction",
 			http.MethodPost,

@@ -38,12 +38,12 @@ func GetAllAccount(w http.ResponseWriter, r *http.Request) {
 func SearchAccountByID(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	stringID := vars["id"]
-	// FIXME : comment je passe d'une string à un int64 ?
 	ID, e := strconv.Atoi(stringID)
 	if e != nil {
-		errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: "Paramètre name obligatoire non vide"}, http.StatusBadRequest, w)
+		errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: "Paramètre ID obligatoire non vide"}, http.StatusBadRequest, w)
 	} else {
 		account, err := accountService.SearchByID(int64(ID))
+		log.Printf("type account %T, la valeur%v\n", account, account)
 		if err != nil {
 			// FIXME meilleur Message
 			log.Println("Erreur sur le select SQL ", err)
@@ -51,6 +51,29 @@ func SearchAccountByID(w http.ResponseWriter, r *http.Request) {
 		} else {
 			if account.BankaccountID == 0 {
 				errorResponse(&HTTPerror{Code: http.StatusNotFound, Message: "Unknown Account for ID " + stringID}, http.StatusNotFound, w)
+			} else {
+				writeHTTPJSONResponse(w, account)
+			}
+		}
+	}
+}
+
+// SearchAccountByUserID : search all account for a UserID
+func SearchAccountByUserID(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	stringID := vars["id"]
+	ID, e := strconv.Atoi(stringID)
+	if e != nil {
+		errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: "Paramètre ID obligatoire non vide"}, http.StatusBadRequest, w)
+	} else {
+		account, err := accountService.SearchByUserID(int64(ID))
+		log.Printf("type account %T, la valeur%v\n", account, account)
+		if err != nil {
+			log.Println("Erreur sur le select SQL ", err)
+			errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: err.Error()}, http.StatusBadRequest, w)
+		} else {
+			if len(account) == 0 {
+				errorResponse(&HTTPerror{Code: http.StatusNotFound, Message: "no Account for UserID " + stringID}, http.StatusNotFound, w)
 			} else {
 				writeHTTPJSONResponse(w, account)
 			}
@@ -71,6 +94,7 @@ func CreateAccount(w http.ResponseWriter, r *http.Request) {
 			if err := json.Unmarshal(body, &account); err != nil {
 				errorResponse(err, 422, w)
 			} else {
+				log.Printf("Compte à créer : %v\n", account)
 				if err := accountService.Create(&account); err != nil {
 					errorResponse(err, http.StatusInternalServerError, w)
 				} else {

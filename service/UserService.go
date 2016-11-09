@@ -1,7 +1,7 @@
 package service
 
 import (
-	"errors"
+	"log"
 
 	"github.com/tipounet/go-bank/authentication"
 	"github.com/tipounet/go-bank/dao"
@@ -56,6 +56,7 @@ func (service UserService) SearchByPseudo(pseudo string) ([]model.User, error) {
 // UserAuthenticate : authentification d'un utilisateur a partir de son pseudo et son mot de passe
 func (service UserService) UserAuthenticate(pseudo string, pwd string) (retour model.User, err error) {
 	retour, err = service.Dao.GetByPseudo(pseudo)
+
 	if err == nil {
 		return userAuthenticate(pwd, retour)
 	}
@@ -66,6 +67,7 @@ func (service UserService) UserAuthenticate(pseudo string, pwd string) (retour m
 // UserAuthenticateByEMail : authentification d'un utilisateur a partir de son email et son mot de passe
 func (service UserService) UserAuthenticateByEMail(mail string, pwd string) (retour model.User, err error) {
 	retour, err = service.Dao.GetByEmail(mail)
+	log.Printf("Utilisateur récupéré pour l'authentification %v", retour)
 	if err == nil {
 		return userAuthenticate(pwd, retour)
 	}
@@ -74,16 +76,18 @@ func (service UserService) UserAuthenticateByEMail(mail string, pwd string) (ret
 
 // Vérifie les informations utilisateur
 func userAuthenticate(pwd string, user model.User) (retour model.User, err error) {
-	if checkUserPassword(pwd, user) {
+	var ok bool
+	ok, err = checkUserPassword(pwd, user)
+	if ok {
 		return user, nil
 	}
-	err = errors.New("ID and password does not match")
+	// err = errors.New("ID and password does not match")
 	retour = model.User{}
 	return
 }
 
 // checkUserPassword : vérifie que le mot de passe fournit match celui en base
-func checkUserPassword(pwd string, user model.User) bool {
+func checkUserPassword(pwd string, user model.User) (bool, error) {
 	return authentication.PasswordMatch(pwd, &authentication.Password{
 		Hash: user.Pwd,
 		Salt: user.Salted,

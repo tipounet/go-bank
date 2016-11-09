@@ -44,6 +44,7 @@ func hashPassword(saltedPass string) string {
 func combine(salt string, rawPass string) string {
 	// concat salt + password
 	pieces := []string{salt, rawPass}
+	// Attention : changer la glue casse les mdp existant. Il faut prévoir un mode pour initialiser la base !
 	saltedPassword := strings.Join(pieces, "")
 	return saltedPassword
 }
@@ -74,11 +75,13 @@ func CreatePassword(rawPass string) *Password {
 }
 
 // PasswordMatch Checks whether or not the correct password has been provided
-func PasswordMatch(guess string, password *Password) bool {
+func PasswordMatch(guess string, password *Password) (ok bool, err error) {
 	saltedGuess := combine(password.Salt, guess)
 	// compare to the real deal
-	if bcrypt.CompareHashAndPassword([]byte(password.Hash), []byte(saltedGuess)) != nil {
-		return false
+	if err = bcrypt.CompareHashAndPassword([]byte(password.Hash), []byte(saltedGuess)); err != nil {
+		ok = false
+	} else {
+		ok = true
 	}
-	return true
+	return
 }

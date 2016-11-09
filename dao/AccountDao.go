@@ -20,12 +20,7 @@ func (dao AccountDao) GetAll() (accounts []model.Account, err error) {
 
 // SearchByID : get account by ID
 func (dao AccountDao) SearchByID(id int64) (account model.Account, err error) {
-	err = dao.DB.Order("accountnumber asc").First(&account, id).Error
-	// FIXME : delete this !
-	u, _ := getUserByID(account.UserID, dao.DB)
-	account.User = u
-	b, _ := getBankByID(account.BankID, dao.DB)
-	account.Bank = b
+	err = dao.DB.Preload("User").Preload("Bank").Order("accountnumber asc").First(&account, id).Error
 	return
 }
 
@@ -33,23 +28,20 @@ func (dao AccountDao) SearchByID(id int64) (account model.Account, err error) {
 
 // SearchByNumber search bank account from partial account number
 func (dao AccountDao) SearchByNumber(accountNumber string) (accounts []model.Account, err error) {
-	err = dao.DB.Where("accountnumber = ?", accountNumber).Order("accountnumber asc").Find(accounts).Error
-	// setAccountForeignData(accounts, dao.DB)
+	err = dao.DB.Preload("User").Preload("Bank").Where("accountnumber = ?", accountNumber).Order("accountnumber asc").Find(&accounts).Error
 	return
 }
 
 // SearchByUser search bank account for a user
 // FIXME : rename la focntion  serachByUserID
 func (dao AccountDao) SearchByUser(id int64) (accounts []model.Account, err error) {
-	err = dao.DB.Where("userid = ?", id).Find(accounts).Error
-	// FIXME : delete this
-	setAccountForeignData(accounts, dao.DB)
+	err = dao.DB.Preload("User").Preload("Bank").Where("userid = ?", id).Find(&accounts).Error
 	return
 }
 
 // SearchByBank search bank account for a bank
 func (dao AccountDao) SearchByBank(id int64) (accounts []model.Account, err error) {
-	err = dao.DB.Where("bankid = ?", id).Find(accounts).Error
+	err = dao.DB.Where("bankid = ?", id).Find(&accounts).Error
 	setAccountForeignData(accounts, dao.DB)
 	return
 }
