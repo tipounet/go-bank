@@ -147,7 +147,6 @@ func UserAuthenticate(w http.ResponseWriter, r *http.Request) {
 			if err := json.Unmarshal(body, &user); err != nil {
 				errorResponse(err, 422, w)
 			} else {
-				log.Printf("Utilisateur trouvé :  %v\n\n", user)
 				if isEmptyString(user.Pwd) {
 					log.Printf("Pwd vide : %v", user.Pwd)
 					errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: "Information de connexion (utilisateur ou / ou mot de passe) manquante(s)"}, http.StatusBadRequest, w)
@@ -164,7 +163,6 @@ func UserAuthenticate(w http.ResponseWriter, r *http.Request) {
 						log.Printf("Fail y a ni mail ni pseudo %v\n", user)
 						aerr = &HTTPerror{Code: http.StatusBadRequest, Message: "Information de connexion (utilisateur ou / ou mot de passe) manquante(s)"}
 					}
-					log.Printf("le retour de l'authentification %v | erreur : %v\n", retour, aerr)
 					if aerr != nil {
 						code := http.StatusBadRequest
 						errorResponse(aerr, code, w)
@@ -176,8 +174,8 @@ func UserAuthenticate(w http.ResponseWriter, r *http.Request) {
 							writeHTTPJSONResponse(w, retour)
 						} else {
 							// FIXME : code http for bad credential, StatusUnauthorized ?
-							aerr = &HTTPerror{Code: http.StatusBadRequest, Message: "Erreur d'authentification, utilisateur inconnu ou mot de passe erroné"}
-							errorResponse(aerr, http.StatusBadRequest, w)
+							aerr = &HTTPerror{Code: http.StatusUnauthorized, Message: "Erreur d'authentification, utilisateur inconnu ou mot de passe erroné"}
+							errorResponse(aerr, http.StatusUnauthorized, w)
 						}
 					}
 				}

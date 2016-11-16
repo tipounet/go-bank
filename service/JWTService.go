@@ -35,7 +35,9 @@ func (JWTService) GenerateToken(user model.User) (retour string) {
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	ss, err := token.SignedString(hmacSampleSecret)
-	log.Printf("Erreur %v\n", err)
+	if err != nil {
+		log.Printf("Erreur JWT %v", err)
+	}
 	return ss
 }
 

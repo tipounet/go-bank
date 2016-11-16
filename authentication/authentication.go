@@ -7,15 +7,18 @@ package authentication
 
 import (
 	"crypto/rand"
+	"errors"
 	"log"
 	"strings"
+
+	"github.com/tipounet/go-bank/stringUtils"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
 const (
-	// SaltLength : la taille du sel
-	SaltLength = 64
+	// MaxSaltLength : la taille max du sel
+	MaxSaltLength = 56
 	// EncryptCost  On a scale of 3 - 31, how intense Bcrypt should be
 	EncryptCost = 14
 )
@@ -50,9 +53,20 @@ func combine(salt string, rawPass string) string {
 }
 
 // Generates a random salt using DevNull
-func generateSalt() string {
+func generateSalt(pwdLen int) string {
+	length := MaxSaltLength
+	if pwdLen <= MaxSaltLength {
+		length = MaxSaltLength - pwdLen
+	}
+
+	salt, _ := stringUtils.RandGen(length, stringUtils.All, "", "")
+	return salt
+}
+
+// Generates a random salt using DevNull
+func generateSaltOld() string {
 	// Read in data
-	data := make([]byte, SaltLength)
+	data := make([]byte, MaxSaltLength)
 	_, err := rand.Read(data)
 	if err != nil {
 		log.Fatal(err)
@@ -64,14 +78,17 @@ func generateSalt() string {
 
 //CreatePassword Handles create a new hash/salt combo from a raw password as inputted
 // by the user
-func CreatePassword(rawPass string) *Password {
-
-	password := new(Password)
-	password.Salt = generateSalt()
-	saltedPass := combine(password.Salt, rawPass)
-	password.Hash = hashPassword(saltedPass)
-
-	return password
+func CreatePassword(rawPass string) (*Password, error) {
+	if len(rawPass) > 64 {
+		log.Printf("Le mot de passe est trop long (oui c'est parfois une question de taille :/) : %v", rawPass)
+	} else {
+		password := new(Password)
+		password.Salt = generateSalt(len(rawPass))
+		saltedPass := combine(password.Salt, rawPass)
+		password.Hash = hashPassword(saltedPass)
+		return password, nil
+	}
+	return nil, errors.New("La mot de passe doit faire au maximum 64 caractères")
 }
 
 // PasswordMatch Checks whether or not the correct password has been provided

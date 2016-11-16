@@ -1,8 +1,6 @@
 package service
 
 import (
-	"log"
-
 	"github.com/tipounet/go-bank/authentication"
 	"github.com/tipounet/go-bank/dao"
 	"github.com/tipounet/go-bank/model"
@@ -56,7 +54,6 @@ func (service UserService) SearchByPseudo(pseudo string) ([]model.User, error) {
 // UserAuthenticate : authentification d'un utilisateur a partir de son pseudo et son mot de passe
 func (service UserService) UserAuthenticate(pseudo string, pwd string) (retour model.User, err error) {
 	retour, err = service.Dao.GetByPseudo(pseudo)
-
 	if err == nil {
 		return userAuthenticate(pwd, retour)
 	}
@@ -67,7 +64,6 @@ func (service UserService) UserAuthenticate(pseudo string, pwd string) (retour m
 // UserAuthenticateByEMail : authentification d'un utilisateur a partir de son email et son mot de passe
 func (service UserService) UserAuthenticateByEMail(mail string, pwd string) (retour model.User, err error) {
 	retour, err = service.Dao.GetByEmail(mail)
-	log.Printf("Utilisateur récupéré pour l'authentification %v", retour)
 	if err == nil {
 		return userAuthenticate(pwd, retour)
 	}
@@ -81,7 +77,6 @@ func userAuthenticate(pwd string, user model.User) (retour model.User, err error
 	if ok {
 		return user, nil
 	}
-	// err = errors.New("ID and password does not match")
 	retour = model.User{}
 	return
 }
@@ -106,14 +101,13 @@ func (service UserService) Read() ([]model.User, error) {
 
 // Update : mise à jour d'un utilisateurs
 func (service UserService) Update(user *model.User) error {
-	// salt := "du sel"
-	// dk, _ := scrypt.Key([]byte(user.Pwd), []byte(salt), 16384, 8, 1, 32)
-	// user.Pwd = string(dk)
-	password := authentication.CreatePassword(user.Pwd)
+	password, e := authentication.CreatePassword(user.Pwd)
+	if e != nil {
+		return e
+	}
 	user.Pwd = password.Hash
 
 	user.Salted = password.Salt
-	// Problème le salt n'est pas utf-8 pas d'insertion => voir pour un blob ? (btea ?)
 	return service.Dao.Update(user)
 }
 

@@ -3,7 +3,6 @@ package main
 
 // "strings" pour les fonctions sur les chaînes de charactères.
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -19,9 +18,9 @@ func main() {
 	// init de la base de données pour être certain de la fermeture. Reste a voir pour que ce soit automatique à la fin de l'appli ? (equivalent de l'init mais en destroy ?)
 	db := dao.GetDbConnexion()
 	defer db.Close()
-	fmt.Printf("Rest API Bank Account v%s\n", configuration.GetConfiguration().Version)
+	log.Printf("Rest API Bank Account v%s\n", configuration.GetConfiguration().Version)
 	port := strconv.FormatInt(configuration.GetConfiguration().HTTP.Port, 10)
-	fmt.Println("Please visite http://localhost:" + port)
+	log.Printf("Please visite http://localhost:%v\n", port)
 
 	myRouter := controllers.NewRouter()
 
