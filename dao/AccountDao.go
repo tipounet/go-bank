@@ -41,8 +41,7 @@ func (dao AccountDao) SearchByUser(id int64) (accounts []model.Account, err erro
 
 // SearchByBank search bank account for a bank
 func (dao AccountDao) SearchByBank(id int64) (accounts []model.Account, err error) {
-	err = dao.DB.Where("bankid = ?", id).Find(&accounts).Error
-	setAccountForeignData(accounts, dao.DB)
+	err = dao.DB.Preload("User").Preload("Bank").Where("bankid = ?", id).Find(&accounts).Error
 	return
 }
 
@@ -79,20 +78,4 @@ func getBankByID(id int64, db *gorm.DB) (model.Bank, error) {
 		DB: db,
 	}
 	return bdao.GetByID(id)
-}
-
-// setUser : récuèpre un utilisateur depuis son ID
-func setAccountForeignData(accounts []model.Account, db *gorm.DB) {
-	for i, a := range accounts {
-		tmp := &accounts[i]
-		u, e := getUserByID(a.UserID, db)
-		if e == nil {
-			tmp.User = u
-		}
-
-		b, eb := getBankByID(a.BankID, db)
-		if eb == nil {
-			tmp.Bank = b
-		}
-	}
 }

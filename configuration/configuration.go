@@ -31,16 +31,20 @@ type Configuration struct {
 	JWT         string
 }
 
-var configuration Configuration
+var (
+	configuration Configuration
+	configFile    = "application.yaml"
+)
 
-// FIXME : retourner une erreur plutôt que les deux panic ?
 func init() {
-	loadConfiguration()
+	LoadConfiguration()
 }
 
-func loadConfiguration() {
+// LoadConfiguration : chargement de la configuration.
+// Ne pas faire dans l'init parce que sinon pas de TU parces qu'il trouve pas le fichier de conf
+func LoadConfiguration() {
 	log.Println("Chargement de la configuration ...")
-	source, err := ioutil.ReadFile("application.yaml")
+	source, err := ioutil.ReadFile(configFile)
 	if err != nil {
 		panic(err)
 	}
@@ -59,5 +63,5 @@ func GetConfiguration() Configuration {
 // ReloadConfiguration : rechargement de la configuration de l'application
 func ReloadConfiguration() {
 	log.Println("Rechargement de la configuration demandé")
-	loadConfiguration()
+	LoadConfiguration()
 }

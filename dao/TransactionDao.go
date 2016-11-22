@@ -115,19 +115,3 @@ func getTypeByID(id int64, db *gorm.DB) (model.TransactionType, error) {
 	}
 	return tdao.GetByID(id)
 }
-
-// setTransactionForeignData : ajout des compte bancaire correspondant aux transactions passées en paramètre. On travail direct sur la première liste histoire d'éviter l'emprunte mémoire trop importante.
-func setTransactionForeignData(transactions []model.Transaction, db *gorm.DB) {
-	for i, t := range transactions {
-		tmp := &transactions[i]
-		a, e := getAccountByID(t.Transactionid, db)
-		if e == nil {
-			tmp.Account = a
-		}
-
-		ty, et := getTypeByID(t.Transactionid, db)
-		if et == nil {
-			tmp.TransactionType = ty
-		}
-	}
-}

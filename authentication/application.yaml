@@ -1,0 +1,21 @@
+# Fichier de configuration de l'application
+# Information de connexion pour la base de données postgresql
+pg :
+  host : localhost
+  port : 5432
+  user : bankAccountApp
+  password : bankAccountApp
+  schema : bankAccountApp
+
+# Peux être d'autre chose plus tard comme le sel pour l'encodage des mots de passe ?
+http :
+  port : 8080
+  context : /
+
+# Version de l'application qui sera indiquée par l'intégration continue un jour
+version : 1.0.0-SNAPSHOT
+
+# activation ou non du retour (json ou xml) formaté (à des fin de debug)
+prettyprint : true
+
+jwt : s3cr3tK3y à moi tout seul que je connais !ee

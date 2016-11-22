@@ -57,6 +57,11 @@ func (JWTService) ParseToken(tokenString string) (user model.User, ok bool) {
 		}
 		return hmacSampleSecret, nil
 	})
+	// token peux être nil et pas d'erreur avant :'(
+	if token == nil {
+		ok = false
+		return
+	}
 	// attention ici validToken c'est pas le scope global c'est le scope du if et donc si on fait juste un return ça retourne le ok de la fonction qui lui vaut forcément false ici
 	// donc on peu pas l'appeler ok
 	if claims, validToken := token.Claims.(*UserClaims); validToken && token.Valid {

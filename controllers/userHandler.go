@@ -1,15 +1,13 @@
 package controllers
 
 import (
-	"encoding/json"
-	"io"
-	"io/ioutil"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
 	"time"
 
-	"github.com/gorilla/mux"
+	restful "github.com/emicklei/go-restful"
 
 	"github.com/tipounet/go-bank/dao"
 	"github.com/tipounet/go-bank/model"
@@ -32,152 +30,140 @@ func init() {
 	}
 }
 
+//UserResource gestion des ressources http pour les utilisateurs
+type UserResource struct{}
+
+// RegisterTo : enregistrement des ws
+func (u UserResource) RegisterTo() *restful.WebService {
+	ws := new(restful.WebService)
+	ws.Path("/user").
+		Consumes(restful.MIME_XML, restful.MIME_JSON).
+		Produces(restful.MIME_JSON, restful.MIME_XML)
+
+	ws.Route(ws.GET("").To(u.GetAllUser).Filter(jwtFilter))
+	ws.Route(ws.GET("/{id}").To(u.SearchUserByID).Filter(jwtFilter))
+	ws.Route(ws.POST("").To(u.CreateUser).Filter(jwtFilter))
+	ws.Route(ws.POST("/authenticate").To(u.UserAuthenticate))
+	ws.Route(ws.PUT("").To(u.UpdateUser).Filter(jwtFilter))
+	ws.Route(ws.DELETE("/{id}").To(u.DeleteUserID).Filter(jwtFilter))
+	ws.Route(ws.DELETE("/logout").To(u.DeleteUserID).Filter(jwtFilter))
+	return ws
+}
+
 // GetAllUser : service qui retourne la liste complète des utilisateurs
-func GetAllUser(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+func (u UserResource) GetAllUser(request *restful.Request, response *restful.Response) {
+	response.AddHeader("Access-Control-Allow-Origin", "*")
 	if users, e := userService.Read(); e != nil {
-		errorResponse(e, http.StatusBadRequest, w)
+		response.WriteError(http.StatusBadRequest, e)
 	} else {
-		writeHTTPJSONResponse(w, users)
+		response.WriteEntity(users)
 	}
 }
 
 //SearchUserByID :tous est dans le nom
-func SearchUserByID(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	stringID := vars["id"]
-	// FIXME : comment je passe d'une string à un int64 ?
+func (u UserResource) SearchUserByID(request *restful.Request, response *restful.Response) {
+	stringID := request.PathParameter("id")
 	ID, e := strconv.Atoi(stringID)
 	if e != nil {
-		errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: "Paramètre id obligatoire non vide"}, http.StatusBadRequest, w)
+		response.WriteErrorString(http.StatusBadRequest, "Paramètre id obligatoire")
 	} else {
 		user, err := userService.Search(int64(ID))
 		if err != nil {
 			// FIXME meilleur Message
 			log.Println("Erreur sur le select SQL ", err)
-			errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: err.Error()}, http.StatusBadRequest, w)
+			response.WriteError(http.StatusBadRequest, err)
 		} else {
 			if user.UserID == 0 {
-				errorResponse(&HTTPerror{Code: http.StatusNotFound, Message: "Unknown User for ID " + stringID}, http.StatusNotFound, w)
+				response.WriteErrorString(http.StatusBadRequest, "Unknown User for ID ")
 			} else {
-				writeHTTPJSONResponse(w, user)
+				response.WriteEntity(user)
 			}
 		}
 	}
 }
 
 // CreateUser : Réponse sur requete POST a /user avec l'utilisateur en JSON dans le body
-func CreateUser(w http.ResponseWriter, r *http.Request) {
-	var user model.User
-	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
+func (u UserResource) CreateUser(request *restful.Request, response *restful.Response) {
+	user := new(model.User)
+	err := request.ReadEntity(&user)
 	if err != nil {
-		errorResponse(err, http.StatusBadRequest, w)
+		response.WriteError(http.StatusBadRequest, err)
 	} else {
-		if err := r.Body.Close(); err != nil {
-			errorResponse(err, http.StatusBadRequest, w)
+		if err := userService.Create(user); err != nil {
+			response.WriteError(http.StatusInternalServerError, err)
 		} else {
-			if err := json.Unmarshal(body, &user); err != nil {
-				errorResponse(err, 422, w)
-			} else {
-				if err := userService.Create(&user); err != nil {
-					errorResponse(err, http.StatusInternalServerError, w)
-				} else {
-					writeHTTPJSONResponse(w, user)
-				}
-			}
+			response.WriteEntity(user)
 		}
 	}
 }
 
 // UpdateUser : Mise a jour d'un utilisateur
-func UpdateUser(w http.ResponseWriter, r *http.Request) {
-	var user model.User
-	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
+func (u UserResource) UpdateUser(request *restful.Request, response *restful.Response) {
+	user := new(model.User)
+	err := request.ReadEntity(&user)
 	if err != nil {
-		errorResponse(err, http.StatusBadRequest, w)
+		response.WriteError(http.StatusBadRequest, err)
 	} else {
-		if err := r.Body.Close(); err != nil {
-			errorResponse(err, http.StatusBadRequest, w)
+		if err := userService.Update(user); err != nil {
+			response.WriteError(http.StatusInternalServerError, err)
 		} else {
-			if err := json.Unmarshal(body, &user); err != nil {
-				errorResponse(err, 422, w)
-			} else {
-				if err := userService.Update(&user); err != nil {
-					errorResponse(err, http.StatusInternalServerError, w)
-				} else {
-					w.WriteHeader(http.StatusNoContent)
-				}
-			}
+			response.WriteHeader(http.StatusNoContent)
 		}
 	}
 }
 
 // DeleteUserID : reponse http à la demande de suppression d'un utilisateur a partir de son ID
-func DeleteUserID(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	strID := vars["id"]
+func (u UserResource) DeleteUserID(request *restful.Request, response *restful.Response) {
+	strID := request.PathParameter("id")
 	if strID == "" {
-		errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: "Paramètre ID obligatoire non vide"}, http.StatusBadRequest, w)
+		response.WriteErrorString(http.StatusBadRequest, "Paramètre ID obligatoire non vide")
 	} else {
 		ID, errConv := strconv.Atoi(strID)
 		if errConv != nil {
-			msg := "Erreur de conversion\n" + errConv.Error()
-			errorResponse(&HTTPerror{Code: http.StatusInternalServerError, Message: msg}, http.StatusBadRequest, w)
+			response.WriteError(http.StatusBadRequest, errConv)
 		} else {
 			if err := userService.Delete(&model.User{UserID: int64(ID)}); err != nil {
 				msg := "Suppresion du user d'id `" + string(ID) + "` impossible. \n" + err.Error()
-				errorResponse(&HTTPerror{Code: http.StatusInternalServerError, Message: msg}, http.StatusBadRequest, w)
+				response.WriteErrorString(http.StatusInternalServerError, msg)
 			} else {
-				w.WriteHeader(http.StatusNoContent)
+				response.WriteHeader(http.StatusNoContent)
 			}
 		}
 	}
 }
 
 //UserAuthenticate : authentification de l'utilisateur, un utilisateur est en paylaod de la requête
-func UserAuthenticate(w http.ResponseWriter, r *http.Request) {
-	var user model.User
-	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
+func (u UserResource) UserAuthenticate(request *restful.Request, response *restful.Response) {
+	user := new(model.User)
+	err := request.ReadEntity(&user)
 	if err != nil {
-		errorResponse(err, http.StatusBadRequest, w)
+		response.WriteError(http.StatusBadRequest, err)
 	} else {
-		if err := r.Body.Close(); err != nil {
-			errorResponse(err, http.StatusBadRequest, w)
+		if isEmptyString(user.Pwd) {
+			response.WriteErrorString(http.StatusBadRequest, "Information de connexion (utilisateur ou / ou mot de passe) manquante(s)")
 		} else {
-			if err := json.Unmarshal(body, &user); err != nil {
-				errorResponse(err, 422, w)
+			var aerr error
+			var retour model.User
+			if !isEmptyString(user.Email) {
+				log.Printf("Recherche par email : %v\n", user.Email)
+				retour, aerr = userService.UserAuthenticateByEMail(user.Email, user.Pwd)
+			} else if !isEmptyString(user.Pseudo) {
+				log.Printf("Recherche par pseudo : %v %v\n", user.Email, user.Pwd)
+				retour, aerr = userService.UserAuthenticate(user.Pseudo, user.Pwd)
 			} else {
-				if isEmptyString(user.Pwd) {
-					log.Printf("Pwd vide : %v", user.Pwd)
-					errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: "Information de connexion (utilisateur ou / ou mot de passe) manquante(s)"}, http.StatusBadRequest, w)
+				log.Printf("Fail y a ni mail ni pseudo %v\n", user)
+				aerr = fmt.Errorf("Information de connexion (utilisateur ou / ou mot de passe) manquante(s)")
+			}
+			if aerr != nil {
+				response.WriteError(http.StatusBadRequest, aerr)
+			} else {
+				if retour.UserID > 0 {
+					// suppression du mot de passe de l'objet que l'on renvoit au client.
+					retour.Pwd = ""
+					addJWTtokenToResponse(retour, response)
+					response.WriteEntity(retour)
 				} else {
-					var aerr error
-					var retour model.User
-					if !isEmptyString(user.Email) {
-						log.Printf("Recherche par email : %v\n", user.Email)
-						retour, aerr = userService.UserAuthenticateByEMail(user.Email, user.Pwd)
-					} else if !isEmptyString(user.Pseudo) {
-						log.Printf("Recherche par pseudo : %v %v\n", user.Email, user.Pwd)
-						retour, aerr = userService.UserAuthenticate(user.Pseudo, user.Pwd)
-					} else {
-						log.Printf("Fail y a ni mail ni pseudo %v\n", user)
-						aerr = &HTTPerror{Code: http.StatusBadRequest, Message: "Information de connexion (utilisateur ou / ou mot de passe) manquante(s)"}
-					}
-					if aerr != nil {
-						code := http.StatusBadRequest
-						errorResponse(aerr, code, w)
-					} else {
-						if retour.UserID > 0 {
-							// suppression du mot de passe de l'objet que l'on renvoit au client.
-							retour.Pwd = ""
-							addJWTtokenToResponse(retour, w)
-							writeHTTPJSONResponse(w, retour)
-						} else {
-							// FIXME : code http for bad credential, StatusUnauthorized ?
-							aerr = &HTTPerror{Code: http.StatusUnauthorized, Message: "Erreur d'authentification, utilisateur inconnu ou mot de passe erroné"}
-							errorResponse(aerr, http.StatusUnauthorized, w)
-						}
-					}
+					response.WriteErrorString(http.StatusUnauthorized, "Erreur d'authentification, utilisateur inconnu ou mot de passe erroné")
 				}
 			}
 		}
@@ -185,16 +171,16 @@ func UserAuthenticate(w http.ResponseWriter, r *http.Request) {
 }
 
 // UserLogout : traitement de la requête http DELTE sur /user/logout. Il s'agit de la déconnexion de l'utilisateur
-func UserLogout(w http.ResponseWriter, r *http.Request) {
+func (u UserResource) UserLogout(request *restful.Request, response *restful.Response) {
 	// en cas de sauvegarde de l'utilisateur connecté en base il faut le supprimer
 	// suppression du cookie jwt
-	http.SetCookie(w, &http.Cookie{
+	http.SetCookie(response.ResponseWriter, &http.Cookie{
 		Name:    "jwt",
 		Value:   "",
 		Path:    "/",
 		Expires: time.Now().Add(-20 * time.Minute),
 	})
-	w.Header().Set("Authorization", "")
+	response.AddHeader("Authorization", "")
 }
 
 // cette fonction ne fonctionne pas, comment tester correctement qu'une chaine de caractère est vide ????

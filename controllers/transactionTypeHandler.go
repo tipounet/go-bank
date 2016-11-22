@@ -1,14 +1,11 @@
 package controllers
 
 import (
-	"encoding/json"
-	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
 
-	"github.com/gorilla/mux"
+	restful "github.com/emicklei/go-restful"
 
 	"github.com/tipounet/go-bank/dao"
 	"github.com/tipounet/go-bank/model"
@@ -28,101 +25,100 @@ func init() {
 	}
 }
 
+// TransactionTypeResource : Ressoure au sens http d'un service rest
+type TransactionTypeResource struct{}
+
+// RegisterTo : Permet l'enregistrement des Ressoures pour la version dans le container http global
+func (t TransactionTypeResource) RegisterTo() *restful.WebService {
+	ws := new(restful.WebService)
+	ws.Path("/transactionType").
+		Consumes(restful.MIME_XML, restful.MIME_JSON).
+		Produces(restful.MIME_JSON, restful.MIME_XML)
+
+	ws.Route(ws.GET("").To(t.GetAllTransactionType).Filter(jwtFilter))
+	ws.Route(ws.GET("/{id}").To(t.SearchTransactionTypeByID).Filter(jwtFilter))
+	ws.Route(ws.POST("").To(t.CreateTransactionType).Filter(jwtFilter))
+	ws.Route(ws.PUT("").To(t.UpdateTransactionType).Filter(jwtFilter))
+	ws.Route(ws.DELETE("/{id}").To(t.DeleteTransactionTypeID).Filter(jwtFilter))
+	return ws
+}
+
 // GetAllTransactionType : service qui retourne la liste complète des comptes
-func GetAllTransactionType(w http.ResponseWriter, r *http.Request) {
+func (t TransactionTypeResource) GetAllTransactionType(request *restful.Request, response *restful.Response) {
 	if tts, e := transactionTypeService.Read(); e != nil {
-		errorResponse(e, http.StatusBadRequest, w)
+		response.WriteError(http.StatusBadRequest, e)
 	} else {
-		writeHTTPJSONResponse(w, tts)
+		response.WriteEntity(tts)
 	}
 }
 
 //SearchTransactionTypeByID :tous est dans le nom
-func SearchTransactionTypeByID(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	stringID := vars["id"]
+func (t TransactionTypeResource) SearchTransactionTypeByID(request *restful.Request, response *restful.Response) {
+	stringID := request.PathParameter("id")
 	ID, e := strconv.Atoi(stringID)
 	if e != nil {
-		errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: "Paramètre name obligatoire non vide"}, http.StatusBadRequest, w)
+		response.WriteErrorString(http.StatusBadRequest, "Paramètre name obligatoire non vide")
 	} else {
 		tt, err := transactionTypeService.SearchByID(int64(ID))
 		if err != nil {
-			// FIXME meilleur Message
-			log.Println("Erreur sur le select SQL ", err)
-			errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: err.Error()}, http.StatusBadRequest, w)
+			log.Println("Erreur SQL ", err)
+			response.WriteError(http.StatusBadRequest, err)
 		} else {
 			if tt.TransactionTypeID == 0 {
-				errorResponse(&HTTPerror{Code: http.StatusNotFound, Message: "Unknown Transaction type for ID " + stringID}, http.StatusNotFound, w)
+				response.WriteErrorString(http.StatusBadRequest, "Unknown Transaction type for ID "+stringID)
 			} else {
-				writeHTTPJSONResponse(w, tt)
+				response.WriteEntity(tt)
 			}
 		}
 	}
 }
 
 // CreateTransactionType : Réponse sur requete POST a /typeTransaction
-func CreateTransactionType(w http.ResponseWriter, r *http.Request) {
-	var ttype model.TransactionType
-	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
+func (t TransactionTypeResource) CreateTransactionType(request *restful.Request, response *restful.Response) {
+	ttype := new(model.TransactionType)
+	err := request.ReadEntity(&ttype)
 	if err != nil {
-		errorResponse(err, http.StatusBadRequest, w)
+		response.WriteError(http.StatusBadRequest, err)
 	} else {
-		if err := r.Body.Close(); err != nil {
-			errorResponse(err, http.StatusBadRequest, w)
+		if err := transactionTypeService.Create(ttype); err != nil {
+			response.WriteError(http.StatusInternalServerError, err)
 		} else {
-			if err := json.Unmarshal(body, &ttype); err != nil {
-				errorResponse(err, 422, w)
-			} else {
-				if err := transactionTypeService.Create(&ttype); err != nil {
-					errorResponse(err, http.StatusInternalServerError, w)
-				} else {
-					writeHTTPJSONResponse(w, ttype)
-				}
-			}
+			response.WriteEntity(ttype)
 		}
 	}
 }
 
 // UpdateTransactionType : Mise a jour d'un type de transaction
-func UpdateTransactionType(w http.ResponseWriter, r *http.Request) {
-	var tt model.TransactionType
-	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
+func (t TransactionTypeResource) UpdateTransactionType(request *restful.Request, response *restful.Response) {
+	ttype := new(model.TransactionType)
+	err := request.ReadEntity(&ttype)
 	if err != nil {
-		errorResponse(err, http.StatusBadRequest, w)
+		response.WriteError(http.StatusBadRequest, err)
 	} else {
-		if err := r.Body.Close(); err != nil {
-			errorResponse(err, http.StatusBadRequest, w)
+		if err := transactionTypeService.Update(ttype); err != nil {
+			response.WriteError(http.StatusInternalServerError, err)
 		} else {
-			if err := json.Unmarshal(body, &tt); err != nil {
-				errorResponse(err, 422, w)
-			} else {
-				if err := transactionTypeService.Update(&tt); err != nil {
-					errorResponse(err, http.StatusInternalServerError, w)
-				} else {
-					w.WriteHeader(http.StatusNoContent)
-				}
-			}
+			response.WriteHeader(http.StatusNoContent)
 		}
 	}
 }
 
 // DeleteTransactionTypeID : reponse http à la demande de suppression d'un type de transaction
-func DeleteTransactionTypeID(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	strID := vars["id"]
+func (t TransactionTypeResource) DeleteTransactionTypeID(request *restful.Request, response *restful.Response) {
+	strID := request.PathParameter("id")
 	if strID == "" {
-		errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: "Paramètre ID obligatoire non vide"}, http.StatusBadRequest, w)
+		response.WriteErrorString(http.StatusBadRequest, "Paramètre ID obligatoire non vide")
 	} else {
 		ID, errConv := strconv.Atoi(strID)
 		if errConv != nil {
 			msg := "Erreur de conversion\n" + errConv.Error()
-			errorResponse(&HTTPerror{Code: http.StatusInternalServerError, Message: msg}, http.StatusBadRequest, w)
+			response.WriteErrorString(http.StatusBadRequest, msg)
 		} else {
 			if err := transactionTypeService.Delete(&model.TransactionType{TransactionTypeID: int64(ID)}); err != nil {
 				msg := "Suppresion du type de transaction `" + string(ID) + "` impossible. \n" + err.Error()
-				errorResponse(&HTTPerror{Code: http.StatusInternalServerError, Message: msg}, http.StatusBadRequest, w)
+				response.WriteErrorString(http.StatusInternalServerError, msg)
 			} else {
-				w.WriteHeader(http.StatusNoContent)
+				response.WriteHeader(http.StatusNoContent)
 			}
 		}
 	}

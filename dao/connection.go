@@ -27,7 +27,7 @@ func init() {
 			panic(err)
 		}
 		// configuration de la base
-		// supprime le fait que gorm cherche une table qui correspond au nom de la struc avec un s au bot
+		// supprime le fait que gorm cherche une table qui correspond au nom de la struc avec un s au bout
 		// db.SingularTable(true)
 		// est ce que ça marche en général ça ?
 		// db.Set("gorm:save_associations", false)

@@ -1,14 +1,11 @@
 package controllers
 
 import (
-	"encoding/json"
-	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
 
-	"github.com/gorilla/mux"
+	restful "github.com/emicklei/go-restful"
 
 	"github.com/tipounet/go-bank/dao"
 	"github.com/tipounet/go-bank/model"
@@ -28,22 +25,40 @@ func init() {
 	}
 }
 
+// TransactionResource : Ressoure au sens http d'un service rest
+type TransactionResource struct{}
+
+// RegisterTo : Permet l'enregistrement des Ressoures pour la version dans le container http global
+func (t TransactionResource) RegisterTo() *restful.WebService {
+	ws := new(restful.WebService)
+	ws.Path("/transaction").
+		Consumes(restful.MIME_XML, restful.MIME_JSON).
+		Produces(restful.MIME_JSON, restful.MIME_XML)
+
+	ws.Route(ws.GET("").To(t.GetAllTransaction).Filter(jwtFilter))
+	ws.Route(ws.GET("/{id}").To(t.SearchTransactionByID).Filter(jwtFilter))
+	ws.Route(ws.GET("/account/{id}").To(t.SearchTransactionByAccountID).Filter(jwtFilter))
+	ws.Route(ws.POST("").To(t.CreateTransaction).Filter(jwtFilter))
+	ws.Route(ws.PUT("").To(t.UpdateTransaction).Filter(jwtFilter))
+	ws.Route(ws.DELETE("/{id}").To(t.DeleteTransactionID).Filter(jwtFilter))
+	return ws
+}
+
 // GetAllTransaction : service qui retourne la liste complète des comptes
-func GetAllTransaction(w http.ResponseWriter, r *http.Request) {
+func (t TransactionResource) GetAllTransaction(request *restful.Request, response *restful.Response) {
 	if transaction, e := transactionService.Read(); e != nil {
-		errorResponse(e, http.StatusBadRequest, w)
+		response.WriteError(http.StatusBadRequest, e)
 	} else {
-		writeHTTPJSONResponse(w, transaction)
+		response.WriteEntity(transaction)
 	}
 }
 
 //SearchTransactionByID :tous est dans le nom
-func SearchTransactionByID(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	stringID := vars["id"]
+func (t TransactionResource) SearchTransactionByID(request *restful.Request, response *restful.Response) {
+	stringID := request.PathParameter("id")
 	ID, e := strconv.Atoi(stringID)
 	if e != nil {
-		errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: "Paramètre id obligatoire non vide"}, http.StatusBadRequest, w)
+		response.WriteErrorString(http.StatusBadRequest, "Paramètre id obligatoire")
 	} else {
 		transaction, err := transactionService.SearchByID(int64(ID))
 		if err != nil {
@@ -52,27 +67,26 @@ func SearchTransactionByID(w http.ResponseWriter, r *http.Request) {
 			// Le errorResponse est dupliqué parce si j'essai httpCode := http.StatusNotFound
 			// Le compilateur couine soit parce qu'il veux pas passer d'un int à un int64 soit l'inverse suivant le type que je donne a httpCode ...
 			if err.Error() == "record not found" {
-				errorResponse(&HTTPerror{Code: http.StatusNotFound, Message: "Unknown transaction for ID " + stringID}, http.StatusNotFound, w)
+				response.WriteErrorString(http.StatusBadRequest, "Unknown transaction for ID "+stringID)
 			} else {
-				errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: err.Error()}, http.StatusBadRequest, w)
+				response.WriteError(http.StatusBadRequest, err)
 			}
 		} else {
 			if transaction.Transactionid == 0 {
-				errorResponse(&HTTPerror{Code: http.StatusNotFound, Message: "Unknown transaction for ID " + stringID}, http.StatusNotFound, w)
+				response.WriteErrorString(http.StatusNotFound, "Unknown transaction for ID "+stringID)
 			} else {
-				writeHTTPJSONResponse(w, transaction)
+				response.WriteEntity(transaction)
 			}
 		}
 	}
 }
 
 //SearchTransactionByAccountID : Retourne a liste des transactions d'un compte spécifique.
-func SearchTransactionByAccountID(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	stringID := vars["id"]
+func (t TransactionResource) SearchTransactionByAccountID(request *restful.Request, response *restful.Response) {
+	stringID := request.PathParameter("id")
 	ID, e := strconv.Atoi(stringID)
 	if e != nil {
-		errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: "Paramètre id obligatoire non vide"}, http.StatusBadRequest, w)
+		response.WriteErrorString(http.StatusBadRequest, "Paramètre id obligatoire")
 	} else {
 		transactions, err := transactionService.SearchByAccount(int64(ID))
 		if err != nil {
@@ -81,95 +95,74 @@ func SearchTransactionByAccountID(w http.ResponseWriter, r *http.Request) {
 			// Le errorResponse est dupliqué parce si j'essai httpCode := http.StatusNotFound
 			// Le compilateur couine soit parce qu'il veux pas passer d'un int à un int64 soit l'inverse suivant le type que je donne a httpCode ...
 			if err.Error() == "record not found" {
-				errorResponse(&HTTPerror{Code: http.StatusNotFound, Message: "Unknown transaction for ID " + stringID}, http.StatusNotFound, w)
+				response.WriteErrorString(http.StatusBadRequest, "Unknown transaction for ID "+stringID)
 			} else {
-				errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: err.Error()}, http.StatusBadRequest, w)
+				response.WriteError(http.StatusBadRequest, err)
 			}
 		} else {
 			if len(transactions) == 0 {
-				errorResponse(&HTTPerror{Code: http.StatusNotFound, Message: "No transaction for account ID " + stringID}, http.StatusNotFound, w)
+				response.WriteErrorString(http.StatusBadRequest, "No transaction for account ID "+stringID)
 			} else {
-				writeHTTPJSONResponse(w, transactions)
+				response.WriteEntity(transactions)
 			}
 		}
 	}
 }
 
 // CreateTransaction : Réponse sur requete POST a /user avec l'utilisateur en JSON dans le body
-func CreateTransaction(w http.ResponseWriter, r *http.Request) {
-	var transaction model.Transaction
-	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
-	log.Printf("\n\nle JSON : %v\n\n", string(body))
+func (t TransactionResource) CreateTransaction(request *restful.Request, response *restful.Response) {
+	transaction := new(model.Transaction)
+	err := request.ReadEntity(&transaction)
 	if err != nil {
-		errorResponse(err, http.StatusBadRequest, w)
+		response.WriteError(http.StatusBadRequest, err)
 	} else {
-		if err := r.Body.Close(); err != nil {
-			errorResponse(err, http.StatusBadRequest, w)
+		if err := transactionService.Create(transaction); err != nil {
+			response.WriteError(http.StatusInternalServerError, err)
 		} else {
-			if err := json.Unmarshal(body, &transaction); err != nil {
-				errorResponse(err, 422, w)
-			} else {
-				log.Printf("on essai d'insérer ça %T %v \n\n", transaction, transaction)
-				if err := transactionService.Create(&transaction); err != nil {
-					errorResponse(err, http.StatusInternalServerError, w)
-				} else {
-					writeHTTPJSONResponse(w, transaction)
-				}
-			}
+			response.WriteEntity(transaction)
 		}
 	}
 }
 
 // UpdateTransaction : Mise a jour d'une transaction
-func UpdateTransaction(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	strID := vars["id"] // l'id est passé dans l'url on fait une mise à complete donc potentiellement l'id aussi
+func (t TransactionResource) UpdateTransaction(request *restful.Request, response *restful.Response) {
+	strID := request.PathParameter("id")
 	log.Printf("id dans l'url : %v", strID)
 	idOriginal, errConv := strconv.Atoi(strID)
 	if errConv != nil {
 		msg := "Erreur de conversion\n" + errConv.Error()
-		errorResponse(&HTTPerror{Code: http.StatusInternalServerError, Message: msg}, http.StatusBadRequest, w)
+		response.WriteErrorString(http.StatusInternalServerError, msg)
 	} else {
-		var transaction model.Transaction
-		body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
+		transaction := new(model.Transaction)
+		err := request.ReadEntity(&transaction)
 		if err != nil {
-			errorResponse(err, http.StatusBadRequest, w)
+			response.WriteError(http.StatusBadRequest, err)
 		} else {
-			if err := r.Body.Close(); err != nil {
-				errorResponse(err, http.StatusBadRequest, w)
+			log.Printf("la transaction a mettre a jour : %v", transaction)
+			if err := transactionService.Update(transaction, int64(idOriginal)); err != nil {
+				response.WriteError(http.StatusInternalServerError, err)
 			} else {
-				if err := json.Unmarshal(body, &transaction); err != nil {
-					errorResponse(err, 422, w)
-				} else {
-					log.Printf("la transaction a mettre a jour : %v", transaction)
-					if err := transactionService.Update(&transaction, int64(idOriginal)); err != nil {
-						errorResponse(err, http.StatusInternalServerError, w)
-					} else {
-						w.WriteHeader(http.StatusNoContent)
-					}
-				}
+				response.WriteHeader(http.StatusNoContent)
 			}
 		}
 	}
 }
 
 // DeleteTransactionID : reponse http à la demande de suppression d'un utilisateur a partir de son ID
-func DeleteTransactionID(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	strID := vars["id"]
+func (t TransactionResource) DeleteTransactionID(request *restful.Request, response *restful.Response) {
+	strID := request.PathParameter("id")
 	if strID == "" {
-		errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: "Paramètre ID obligatoire non vide"}, http.StatusBadRequest, w)
+		response.WriteErrorString(http.StatusBadRequest, "Paramètre ID obligatoire non vide")
 	} else {
 		ID, errConv := strconv.Atoi(strID)
 		if errConv != nil {
-			msg := "Erreur de conversion\n" + errConv.Error()
-			errorResponse(&HTTPerror{Code: http.StatusInternalServerError, Message: msg}, http.StatusBadRequest, w)
+			response.WriteError(http.StatusBadRequest, errConv)
 		} else {
 			if err := transactionService.Delete(&model.Transaction{Transactionid: int64(ID)}); err != nil {
 				msg := "Suppresion du compte d'id `" + string(ID) + "` impossible. \n" + err.Error()
-				errorResponse(&HTTPerror{Code: http.StatusInternalServerError, Message: msg}, http.StatusBadRequest, w)
+				response.WriteErrorString(http.StatusInternalServerError, msg)
 			} else {
-				w.WriteHeader(http.StatusNoContent)
+				response.WriteHeader(http.StatusNoContent)
 			}
 		}
 	}
