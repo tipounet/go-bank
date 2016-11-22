@@ -22,8 +22,8 @@ func (service AccountService) SearchByNumber(accountNumber string) (account []mo
 	return service.Dao.SearchByNumber(accountNumber)
 }
 
-// SearchByUser : search account by user id
-func (service AccountService) SearchByUser(id int64) (account []model.Account, err error) {
+// SearchByUserID : search account by user id
+func (service AccountService) SearchByUserID(id int64) (account []model.Account, err error) {
 	return service.Dao.SearchByUser(id)
 }
 

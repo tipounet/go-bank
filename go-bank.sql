@@ -83,7 +83,7 @@ CREATE TABLE users (
     pseudo character varying(50) NOT NULL,
     email character varying(50) NOT NULL,
     pwd character varying(256) NOT NULL,
-    pwdbit bit(32)[]
+    salt character varying(64) NOT NULL,
 );
 
 CREATE SEQUENCE users_userid_seq
@@ -107,10 +107,16 @@ ALTER TABLE ONLY transaction_type
 
 ALTER TABLE ONLY users
     ADD CONSTRAINT pk_users PRIMARY KEY (userid);
+ALTER TABLE ONLY users
+    ADD CONSTRAINT UK_USERMAIL UNIQUE(email)
+ALTER TABLE ONLY transaction
+    ADD CONSTRAINT pk_transaction PRIMARY KEY (transactionid);
 ALTER TABLE ONLY bankaccount
     ADD CONSTRAINT uk_account_numbre UNIQUE (accountnumber);
 ALTER TABLE ONLY transaction
     ADD CONSTRAINT fk_account FOREIGN KEY (bankaccountid) REFERENCES bankaccount(bankaccountid);
+ALTER TABLE ONLY transaction
+        ADD CONSTRAINT fk_type FOREIGN KEY (transaction_type_id) REFERENCES transaction_type(transaction_type_id);
 ALTER TABLE ONLY bankaccount
     ADD CONSTRAINT fk_bank_account FOREIGN KEY (bankid) REFERENCES bank(bankid);
 ALTER TABLE ONLY bankaccount

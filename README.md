@@ -5,7 +5,29 @@ API REST go pour gestion de compte basique
 go get -u github.com/tipounet/go-bank
 
 ## Configuration
-La connexion à la base de données ainsi que le port d'écoute HTTP sont configurables dans le fichier application.yaml (le context http n'est pas encore pris en compte).
+Le fichier de configuration application.yaml permet de fournir :
+* Les données de connexion à la base de données
+
+ Exemple
+``` yaml
+  pg :
+    host : localhost
+    port : 5432
+    user : bankAccountApp
+    password : bankAccountApp
+    schema : bankAccountApp
+```
+* Le port d'écoute HTTP (le context http n'est pas encore pris en compte).
+
+  Exemple
+``` yaml
+  http :
+    port : 8080
+    context : /
+```
+* La version de l'application (doit être placée par l'IC en attendant de trouver mieux)
+* Un flag (prettyjson) permettant de formater le json de sortie de façon plus lisible pour l'humain
+
 
 ## Description des service
 
@@ -80,7 +102,7 @@ Path | Méthode | Description
 /user | PUT | Mise à jour d'un utilisateur avec le JSON dans le corps de la requête
 /user/{id} | DELETE | Suppression d'un utilisateur à partir de son ID
 
-### Transaction : une transaction sur un compte c'est crédit ou un débit, montant, un id etc.
+### Transaction : une transaction sur un compte c'est un crédit ou un débit, montant, un id etc.
 ``` json
 {
    "id":1,
@@ -148,3 +170,23 @@ Path | Méthode | Description
 * Gestion des services avec et sans authentifications
 * Tests unitaires
 * Meilleur gestion des erreurs go renvoyées (code, format etc.)
+* Récupérer les erreurs de gorm pour les exploiter ensuite : ok ?
+* Ajouter l'utilisation des entêtes range / total sur les service get
+* Ajouter code retour partial content (206) ou 200 sur les services avec pagination (donc faire des services avec pagination au besoin)
+* Ajouter documentation pour insertion pour chaque service (surtout pour ceux qui ont des FK les autres ça change rien)
+
+# Exemple d'insertion
+problème avec gorm, pour l'insertion des données il va pas chercher dans les objets lié les fk, du coup il ui faut les colonnes dans l'objet.
+
+pour insérer une transaction
+``` json
+{
+ "description": "Test insertion depuis client rest N°2",
+ "Posteddate": "2016-09-16T00:13:00Z",
+ "userdate": "2016-07-16T07:13:00Z",
+ "fiid": "dsddzez4564",
+ "amount": 4242,
+ "accountID":1,
+ "typeID":1
+}
+```

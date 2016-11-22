@@ -15,7 +15,7 @@ http :
 # Version de l'application qui sera indiquée par l'intégration continue un jour
 version : 1.0.0-SNAPSHOT
 
-# activation ou non du json formaté (a des fin de debug)
+# activation ou non du retour (json ou xml) formaté (à des fin de debug)
 prettyprint : true
 
 jwt : s3cr3tK3y à moi tout seul que je connais !ee

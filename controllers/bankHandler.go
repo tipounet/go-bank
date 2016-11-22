@@ -1,14 +1,11 @@
 package controllers
 
 import (
-	"encoding/json"
-	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
 
-	"github.com/gorilla/mux"
+	restful "github.com/emicklei/go-restful"
 
 	"github.com/tipounet/go-bank/dao"
 	"github.com/tipounet/go-bank/model"
@@ -17,10 +14,10 @@ import (
 
 var bankService service.BankService
 
-func initBankService() {
+func init() {
 	if bankService.Dao == nil {
 		dao := dao.BankDao{
-			DB: dao.DbConnect(),
+			DB: dao.GetDbConnexion(),
 		}
 		bankService = service.BankService{
 			Dao: &dao,
@@ -28,131 +25,116 @@ func initBankService() {
 	}
 }
 
+// BankResource : Ressoure au sens http d'un service rest
+type BankResource struct{}
+
+// RegisterTo : Permet l'enregistrement des Ressoures pour la version dans le container http global
+func (b BankResource) RegisterTo() *restful.WebService {
+	ws := new(restful.WebService)
+	ws.Path("/bank").
+		Consumes(restful.MIME_XML, restful.MIME_JSON).
+		Produces(restful.MIME_JSON, restful.MIME_XML)
+
+	ws.Route(ws.GET("").To(b.GetAllBanK).Filter(jwtFilter))
+	ws.Route(ws.GET("/{id}").To(b.SearchBankByID).Filter(jwtFilter))
+	ws.Route(ws.GET("/name/{name}").To(b.SearchBankByName).Filter(jwtFilter))
+	ws.Route(ws.POST("").To(b.CreateBank).Filter(jwtFilter))
+	ws.Route(ws.PUT("").To(b.UpdateBank).Filter(jwtFilter))
+	ws.Route(ws.DELETE("/{id}").To(b.DeleteBankID).Filter(jwtFilter))
+	return ws
+}
+
 // GetAllBanK : service qui retourne la liste complète des banques
-func GetAllBanK(w http.ResponseWriter, r *http.Request) {
-	initBankService()
-	banks, _ := bankService.Get()
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(banks)
+func (b BankResource) GetAllBanK(request *restful.Request, response *restful.Response) {
+	if banks, e := bankService.Get(); e != nil {
+		response.WriteError(http.StatusBadRequest, e)
+	} else {
+		response.WriteEntity(banks)
+	}
 }
 
 //SearchBankByID :tous est dans le nom
-func SearchBankByID(w http.ResponseWriter, r *http.Request) {
-	initBankService()
-	vars := mux.Vars(r)
-	stringID := vars["id"]
-	// FIXME : comment je passe d'une string à un int64 ?
+func (b BankResource) SearchBankByID(request *restful.Request, response *restful.Response) {
+	stringID := request.PathParameter("id")
 	ID, e := strconv.Atoi(stringID)
 	if e != nil {
-		errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: "Paramètre name obligatoire non vide"}, http.StatusBadRequest, w)
+		response.WriteErrorString(http.StatusBadRequest, "Paramètre id obligatoire")
 	} else {
-		banks, err := bankService.Search(int64(ID))
+		bank, err := bankService.Search(int64(ID))
 		if err != nil {
 			// FIXME meilleur Message
 			log.Println("Erreur sur le select SQL ", err)
-			errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: err.Error()}, http.StatusBadRequest, w)
+			response.WriteError(http.StatusBadRequest, err)
 		} else {
-			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(banks)
+			if bank.Name == "" {
+				response.WriteErrorString(http.StatusBadRequest, "Unknown bank for ID ")
+			} else {
+				response.WriteEntity(bank)
+			}
 		}
 	}
 }
 
 //SearchBankByName :tous est dans le nom
-func SearchBankByName(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	initBankService()
-	vars := mux.Vars(r)
-	name := vars["name"]
+func (b BankResource) SearchBankByName(request *restful.Request, response *restful.Response) {
+	name := request.PathParameter("name")
 	if name == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(HTTPerror{
-			Code:    http.StatusBadRequest,
-			Message: "Paramètre name obligatoire non vide",
-		})
+		response.WriteErrorString(http.StatusBadRequest, "Paramètre name obligatoire non vide")
 	} else {
 		banks, e := bankService.SearchPartialName(name)
 		if e != nil {
-			errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: "Paramètre name obligatoire non vide"}, http.StatusBadRequest, w)
+			response.WriteError(http.StatusBadRequest, e)
+		} else {
+			response.WriteEntity(banks)
 		}
-
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(banks)
 	}
 }
 
 // CreateBank : Réponse sur requete POST a /bank avec la bank en JSON dans le body
-func CreateBank(w http.ResponseWriter, r *http.Request) {
-	initBankService()
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-
-	var bank model.Bank
-	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
+func (b BankResource) CreateBank(request *restful.Request, response *restful.Response) {
+	bank := new(model.Bank)
+	err := request.ReadEntity(&bank)
 	if err != nil {
-		errorResponse(err, http.StatusBadRequest, w)
+		response.WriteError(http.StatusBadRequest, err)
 	} else {
-		if err := r.Body.Close(); err != nil {
-			errorResponse(err, http.StatusBadRequest, w)
+		if err := bankService.Create(bank); err != nil {
+			response.WriteError(http.StatusInternalServerError, err)
 		} else {
-			if err := json.Unmarshal(body, &bank); err != nil {
-				errorResponse(err, 422, w)
-			} else {
-				if err := bankService.Create(&bank); err != nil {
-					errorResponse(err, http.StatusInternalServerError, w)
-				} else {
-					w.WriteHeader(http.StatusOK)
-					json.NewEncoder(w).Encode(bank)
-				}
-			}
+			response.WriteEntity(bank)
 		}
 	}
 }
 
 // UpdateBank : Mise a jour d'une banque
-func UpdateBank(w http.ResponseWriter, r *http.Request) {
-	initBankService()
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-
-	var bank model.Bank
-	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
+func (b BankResource) UpdateBank(request *restful.Request, response *restful.Response) {
+	bank := new(model.Bank)
+	err := request.ReadEntity(&bank)
 	if err != nil {
-		errorResponse(err, http.StatusBadRequest, w)
+		response.WriteError(http.StatusBadRequest, err)
 	} else {
-		if err := r.Body.Close(); err != nil {
-			errorResponse(err, http.StatusBadRequest, w)
+		if err := bankService.Update(bank); err != nil {
+			response.WriteError(http.StatusInternalServerError, err)
 		} else {
-			if err := json.Unmarshal(body, &bank); err != nil {
-				errorResponse(err, 422, w)
-			} else {
-				if err := bankService.Update(&bank); err != nil {
-					errorResponse(err, http.StatusInternalServerError, w)
-				} else {
-					w.WriteHeader(http.StatusOK)
-				}
-			}
+			response.WriteHeader(http.StatusNoContent)
 		}
 	}
 }
 
 // DeleteBankID : reponse http à la demande de suppression d'une banque a partir de son ID
-func DeleteBankID(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	strID := vars["id"]
+func (b BankResource) DeleteBankID(request *restful.Request, response *restful.Response) {
+	strID := request.PathParameter("id")
 	if strID == "" {
-		errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: "Paramètre ID obligatoire non vide"}, http.StatusBadRequest, w)
+		response.WriteErrorString(http.StatusBadRequest, "Paramètre ID obligatoire non vide")
 	} else {
 		ID, errConv := strconv.Atoi(strID)
 		if errConv != nil {
-			msg := "Erreur de conversion\n" + errConv.Error()
-			errorResponse(&HTTPerror{Code: http.StatusInternalServerError, Message: msg}, http.StatusBadRequest, w)
+			response.WriteError(http.StatusBadRequest, errConv)
 		} else {
-			if err := bankService.Delete(&model.Bank{Bankid: int64(ID)}); err != nil {
+			if err := bankService.Delete(&model.Bank{BankID: int64(ID)}); err != nil {
 				msg := "Suppresion de la banque d'id `" + string(ID) + "` impossible. \n" + err.Error()
-				errorResponse(&HTTPerror{Code: http.StatusInternalServerError, Message: msg}, http.StatusBadRequest, w)
+				response.WriteErrorString(http.StatusInternalServerError, msg)
 			} else {
-				w.WriteHeader(http.StatusOK)
+				response.WriteHeader(http.StatusNoContent)
 			}
 		}
 	}

@@ -1,14 +1,11 @@
 package controllers
 
 import (
-	"encoding/json"
-	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
 
-	"github.com/gorilla/mux"
+	restful "github.com/emicklei/go-restful"
 
 	"github.com/tipounet/go-bank/dao"
 	"github.com/tipounet/go-bank/model"
@@ -17,10 +14,10 @@ import (
 
 var accountService service.AccountService
 
-func initAccountService() {
+func init() {
 	if accountService.Dao == nil {
 		dao := dao.AccountDao{
-			DB: dao.DbConnect(),
+			DB: dao.GetDbConnexion(),
 		}
 		accountService = service.AccountService{
 			Dao: &dao,
@@ -28,127 +25,160 @@ func initAccountService() {
 	}
 }
 
+// AccountResource : Ressoure au sens http d'un service rest
+type AccountResource struct{}
+
+// RegisterTo : Permet l'enregistrement des Ressoures pour la version dans le container http global
+func (a AccountResource) RegisterTo() *restful.WebService {
+	ws := new(restful.WebService)
+	ws.Path("/account").
+		Consumes(restful.MIME_XML, restful.MIME_JSON).
+		Produces(restful.MIME_JSON, restful.MIME_XML)
+
+	ws.Route(ws.GET("").To(a.GetAllAccount).Filter(jwtFilter))
+	ws.Route(ws.GET("/{id}").To(a.SearchAccountByID).Filter(jwtFilter))
+	ws.Route(ws.GET("/user/{id}").To(a.SearchAccountByUserID).Filter(jwtFilter))
+	ws.Route(ws.GET("/bank/{id}").To(a.SearchByBank).Filter(jwtFilter))
+	ws.Route(ws.POST("").To(a.CreateAccount).Filter(jwtFilter))
+	ws.Route(ws.PUT("").To(a.UpdateAccount).Filter(jwtFilter))
+	ws.Route(ws.DELETE("/{id}").To(a.DeleteAccountID).Filter(jwtFilter))
+	ws.Route(ws.DELETE("/number/{id}").To(a.DeleteAccountByNumber).Filter(jwtFilter))
+	return ws
+}
+
 // GetAllAccount : service qui retourne la liste complète des comptes
-func GetAllAccount(w http.ResponseWriter, r *http.Request) {
-	initAccountService()
+func (a AccountResource) GetAllAccount(request *restful.Request, response *restful.Response) {
 	accounts, _ := accountService.Read()
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(accounts)
+	response.WriteEntity(accounts)
 }
 
 //SearchAccountByID :tous est dans le nom
-func SearchAccountByID(w http.ResponseWriter, r *http.Request) {
-	initAccountService()
-	vars := mux.Vars(r)
-	stringID := vars["id"]
-	// FIXME : comment je passe d'une string à un int64 ?
+func (a AccountResource) SearchAccountByID(request *restful.Request, response *restful.Response) {
+	stringID := request.PathParameter("id")
 	ID, e := strconv.Atoi(stringID)
 	if e != nil {
-		errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: "Paramètre name obligatoire non vide"}, http.StatusBadRequest, w)
+		response.WriteErrorString(http.StatusBadRequest, "Paramètre id obligatoire")
 	} else {
-		accounts, err := accountService.SearchByID(int64(ID))
+		account, err := accountService.SearchByID(int64(ID))
 		if err != nil {
 			// FIXME meilleur Message
 			log.Println("Erreur sur le select SQL ", err)
-			errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: err.Error()}, http.StatusBadRequest, w)
+			response.WriteError(http.StatusBadRequest, err)
 		} else {
-			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(accounts)
+			if account.BankaccountID == 0 {
+				response.WriteErrorString(http.StatusNotFound, "Unknown Account for ID "+stringID)
+			} else {
+				response.WriteEntity(account)
+			}
+		}
+	}
+}
+
+// SearchAccountByUserID : search all account for a UserID
+func (a AccountResource) SearchAccountByUserID(request *restful.Request, response *restful.Response) {
+	stringID := request.PathParameter("id")
+	ID, e := strconv.Atoi(stringID)
+	if e != nil {
+		response.WriteErrorString(http.StatusBadRequest, "Paramètre id obligatoire")
+	} else {
+		account, err := accountService.SearchByUserID(int64(ID))
+		if err != nil {
+			log.Println("Erreur sur le select SQL ", err)
+			response.WriteError(http.StatusBadRequest, err)
+		} else {
+			if len(account) == 0 {
+				response.WriteErrorString(http.StatusNotFound, "no Account for UserID "+stringID)
+			} else {
+				response.WriteEntity(account)
+			}
+		}
+	}
+}
+
+// SearchByBank liste des comptes d'une banque
+func (a AccountResource) SearchByBank(request *restful.Request, response *restful.Response) {
+	stringID := request.PathParameter("id")
+	ID, e := strconv.Atoi(stringID)
+	if e != nil {
+		response.WriteErrorString(http.StatusBadRequest, "Paramètre id obligatoire")
+	} else {
+		account, err := accountService.SearchByBank(int64(ID))
+		if err != nil {
+			log.Println("Erreur sur le select SQL ", err)
+			response.WriteError(http.StatusBadRequest, err)
+		} else {
+			if len(account) == 0 {
+				response.WriteErrorString(http.StatusNotFound, "no Account for bankid "+stringID)
+			} else {
+				response.WriteEntity(account)
+			}
 		}
 	}
 }
 
 // CreateAccount : Réponse sur requete POST a /account avec l'utilisateur en JSON dans le body
-func CreateAccount(w http.ResponseWriter, r *http.Request) {
-	initAccountService()
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-
-	var account model.Account
-	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
+func (a AccountResource) CreateAccount(request *restful.Request, response *restful.Response) {
+	account := new(model.Account)
+	err := request.ReadEntity(&account)
 	if err != nil {
-		errorResponse(err, http.StatusBadRequest, w)
+		response.WriteError(http.StatusBadRequest, err)
 	} else {
-		if err := r.Body.Close(); err != nil {
-			errorResponse(err, http.StatusBadRequest, w)
+		log.Printf("Compte à créer : %v\n", account)
+		if err := accountService.Create(account); err != nil {
+			response.WriteError(http.StatusInternalServerError, err)
 		} else {
-			if err := json.Unmarshal(body, &account); err != nil {
-				errorResponse(err, 422, w)
-			} else {
-				if err := accountService.Create(&account); err != nil {
-					errorResponse(err, http.StatusInternalServerError, w)
-				} else {
-					w.WriteHeader(http.StatusOK)
-					json.NewEncoder(w).Encode(account)
-				}
-			}
+			response.WriteEntity(account)
 		}
 	}
 }
 
 // UpdateAccount : Mise a jour d'un utilisateur
-func UpdateAccount(w http.ResponseWriter, r *http.Request) {
-	initAccountService()
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-
-	var account model.Account
-	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
+func (a AccountResource) UpdateAccount(request *restful.Request, response *restful.Response) {
+	account := new(model.Account)
+	err := request.ReadEntity(&account)
 	if err != nil {
-		errorResponse(err, http.StatusBadRequest, w)
+		response.WriteError(http.StatusBadRequest, err)
 	} else {
-		if err := r.Body.Close(); err != nil {
-			errorResponse(err, http.StatusBadRequest, w)
+		if err := accountService.Update(account); err != nil {
+			response.WriteError(http.StatusInternalServerError, err)
 		} else {
-			if err := json.Unmarshal(body, &account); err != nil {
-				errorResponse(err, 422, w)
-			} else {
-				if err := accountService.Update(&account); err != nil {
-					errorResponse(err, http.StatusInternalServerError, w)
-				} else {
-					w.WriteHeader(http.StatusOK)
-				}
-			}
+			response.WriteHeader(http.StatusNoContent)
 		}
 	}
 }
 
 // DeleteAccountID : reponse http à la demande de suppression d'un compte a partir de son ID
-func DeleteAccountID(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	strID := vars["id"]
+func (a AccountResource) DeleteAccountID(request *restful.Request, response *restful.Response) {
+	strID := request.PathParameter("id")
 	if strID == "" {
-		errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: "Paramètre ID obligatoire non vide"}, http.StatusBadRequest, w)
+		response.WriteErrorString(http.StatusBadRequest, "Paramètre ID obligatoire non vide")
 	} else {
 		ID, errConv := strconv.Atoi(strID)
 		if errConv != nil {
 			msg := "Erreur de conversion\n" + errConv.Error()
-			errorResponse(&HTTPerror{Code: http.StatusInternalServerError, Message: msg}, http.StatusBadRequest, w)
+			response.WriteErrorString(http.StatusInternalServerError, msg)
 		} else {
-			if err := accountService.Delete(&model.Account{Bankaccountid: int64(ID)}); err != nil {
+			if err := accountService.Delete(&model.Account{BankaccountID: int64(ID)}); err != nil {
 				msg := "Suppresion du compte d'id `" + string(ID) + "` impossible. \n" + err.Error()
-				errorResponse(&HTTPerror{Code: http.StatusInternalServerError, Message: msg}, http.StatusBadRequest, w)
+				response.WriteErrorString(http.StatusInternalServerError, msg)
 			} else {
-				w.WriteHeader(http.StatusOK)
+				response.WriteHeader(http.StatusNoContent)
 			}
 		}
 	}
 }
 
 // DeleteAccountByNumber : reponse http à la demande de suppression d'un compte a partir de son numéro
-func DeleteAccountByNumber(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	accountNumber := vars["number"]
+func (a AccountResource) DeleteAccountByNumber(request *restful.Request, response *restful.Response) {
+	accountNumber := request.PathParameter("number")
 	if accountNumber == "" {
-		errorResponse(&HTTPerror{Code: http.StatusBadRequest, Message: "Paramètre accountNumber obligatoire non vide"}, http.StatusBadRequest, w)
+		response.WriteErrorString(http.StatusBadRequest, "Paramètre accountNumber obligatoire non vide")
 	} else {
 		if err := accountService.Delete(&model.Account{Accountnumber: accountNumber}); err != nil {
 			msg := "Suppresion du compte numéro `" + accountNumber + "` impossible. \n" + err.Error()
-			errorResponse(&HTTPerror{Code: http.StatusInternalServerError, Message: msg}, http.StatusBadRequest, w)
+			response.WriteErrorString(http.StatusInternalServerError, msg)
 		} else {
-			w.WriteHeader(http.StatusOK)
+			response.WriteHeader(http.StatusNoContent)
 		}
 	}
 }
-
-// TODO : ajouter les méthodes de recherches en plus du standar (searchby bank, user etc)
