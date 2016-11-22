@@ -52,7 +52,6 @@ func (u UserResource) RegisterTo() *restful.WebService {
 
 // GetAllUser : service qui retourne la liste complète des utilisateurs
 func (u UserResource) GetAllUser(request *restful.Request, response *restful.Response) {
-	response.AddHeader("Access-Control-Allow-Origin", "*")
 	if users, e := userService.Read(); e != nil {
 		response.WriteError(http.StatusBadRequest, e)
 	} else {
